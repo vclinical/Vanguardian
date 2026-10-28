@@ -90,33 +90,33 @@
     }
   }
 
-  function parseYearFromValue(value) {
-    if (value == null) {
-      return null;
-    }
-    if (typeof value === 'object' && !Array.isArray(value)) {
-      const yearValue = toNumber(value.year);
-      if (yearValue == null) {
+  function parseCalendarDate(value) {
+    let year;
+    let month;
+    let day;
+    if (value != null && typeof value === 'object' && !Array.isArray(value)) {
+      year = toNumber(value.year);
+      month = toNumber(value.month);
+      day = toNumber(value.day);
+    } else {
+      // Date controls serialize dates as YYYY-MM-DD; ignore any time component.
+      const match = String(value ?? '').trim().match(/^(\d{4})-(\d{2})-(\d{2})(?:[T ].*)?$/);
+      if (!match) {
         return null;
       }
-      return Math.trunc(yearValue);
+      year = Number(match[1]);
+      month = Number(match[2]);
+      day = Number(match[3]);
     }
-
-    const rawText = String(value).trim();
-    if (!rawText) {
+    if (![year, month, day].every(Number.isInteger) || year < 1 || year > 9999 || month < 1 || month > 12) {
       return null;
     }
-
-    const numericYear = toNumber(rawText);
-    if (numericYear != null && rawText.length === 4) {
-      return Math.trunc(numericYear);
+    const isLeapYear = year % 4 === 0 && (year % 100 !== 0 || year % 400 === 0);
+    const daysInMonth = [31, isLeapYear ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
+    if (day < 1 || day > daysInMonth[month - 1]) {
+      return null;
     }
-
-    const parsedDate = new Date(rawText);
-    if (!Number.isNaN(parsedDate.getTime())) {
-      return parsedDate.getUTCFullYear();
-    }
-    return null;
+    return { year, month, day };
   }
 
   function resolveStateValue(state, rawRef) {
@@ -146,12 +146,14 @@
   function ageYearsBetween(state, fromDateRef, toDateRef) {
     const fromValue = resolveStateValue(state, fromDateRef);
     const toValue = resolveStateValue(state, toDateRef);
-    const fromYear = parseYearFromValue(fromValue);
-    const toYear = parseYearFromValue(toValue);
-    if (fromYear == null || toYear == null) {
+    const fromDate = parseCalendarDate(fromValue);
+    const toDate = parseCalendarDate(toValue);
+    if (fromDate == null || toDate == null) {
       return null;
     }
-    return toYear - fromYear;
+    const birthdayPending = toDate.month < fromDate.month ||
+      (toDate.month === fromDate.month && toDate.day < fromDate.day);
+    return toDate.year - fromDate.year - (birthdayPending ? 1 : 0);
   }
 
   function expressionLooksSafe(expression) {

@@ -68,6 +68,7 @@ jobs:
         uses: actions/github-script@v8
         with:
           github-token: ${{ secrets.INFRASTRUCTURE_WORKFLOW_TOKEN }}
+          retries: 3
           script: |
             const sourceRef = context.ref.replace('refs/heads/', '');
             const environment = sourceRef === 'main' ? 'nng31-production' : 'nng31-staging';
@@ -96,7 +97,7 @@ jobs:
 
             console.log(`Dispatching Infrastructure workflow_id=${workflow_id}, ref=${dispatchRef}, environment=${environment}, tag=${tag}`);
             await github.rest.actions.createWorkflowDispatch({
-              owner: 'VangEDCian',
+              owner: 'vclinical',
               repo: 'Infrastructure',
               workflow_id,
               ref: dispatchRef,
