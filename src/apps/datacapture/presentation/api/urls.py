@@ -8,10 +8,16 @@ from apps.datacapture.presentation.api.views import (
     DataCaptureSaveAPIView,
     DataCaptureSubmitAPIView,
 )
+from apps.datacapture.presentation.api.views.laboratory_import import LaboratoryImportPreviewView
 
 app_name = "datacapture"
 
 urlpatterns = [
+    path(
+        "studies/<int:study_id>/subjects/<int:subject_id>/laboratory-import/preview/",
+        LaboratoryImportPreviewView.as_view(),
+        name="laboratory_import_preview",
+    ),
     path(
         "studies/<int:study_id>/subjects/<int:subject_id>/events/<int:visit_id>/form-instances/",
         DataCaptureFormInstanceListCreateAPIView.as_view(),

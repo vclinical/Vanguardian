@@ -185,6 +185,7 @@ class CrfTemplateQueryService:
                     "id": str(field_template.pk),
                     "field_key": field_template.field_key,
                     "label": field_label,
+                    "labels": [translation.label for translation in field_template.translations.all() if translation.label],
                     "data_type": field_template.data_type,
                     "display_order": field_template.display_order,
                     "section_template": section_payload,

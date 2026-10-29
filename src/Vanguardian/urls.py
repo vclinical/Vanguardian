@@ -36,6 +36,7 @@ urlpatterns = [
     path("api/", include("apps.crf.presentation.api.urls")),
     path("crf/", include("apps.crf.presentation.web.urls")),
     path("api/", include("apps.datacapture.presentation.api.urls")),
+    path("api/", include("apps.study.presentation.api.urls")),
     path("api/", include("apps.reconcile.presentation.api.urls")),
     path("", include("apps.identity.presentation.web.urls")),
     path("", include("apps.dashboard.presentation.web.urls")),

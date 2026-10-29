@@ -1,0 +1,108 @@
+{% extends "shared/_layout.html" %}
+{% load static %}
+{% block title %}{{ detail_study.code }} | File Importer{% endblock %}
+{% block extra_css %}
+    {{ block.super }}
+    <link rel="stylesheet" href="{% static 'shared/css/components/common-table.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/components/user-detail.css' %}">
+    <link rel="stylesheet" href="{% static 'study/css/file_importer.css' %}">
+{% endblock %}
+{% block dashboard_breadcrumb_prefix %}
+    <a href="{{ detail_study.back_url }}" class="dashboard-breadcrumb__back">Studies</a>
+{% endblock %}
+{% block dashboard_content %}
+    <section class="entity-table-panel file-importer"
+             data-file-importer
+             data-api-url="{% url 'study_api:file_importer' study_id=detail_study.id %}">
+        {% include "study/components/_study_detail_tabs.html" with study_active_tab="file_importer" %}
+        <div class="file-importer__content">
+            <aside class="file-importer__sidebar" aria-label="Chọn file Excel">
+                <h1>File Importer</h1>
+                <p>Tải Excel, đối chiếu cột và xác nhận Visit → biểu mẫu → field. Một cột có thể map tới nhiều field ở nhiều Visit.</p>
+                <p class="file-importer__note">Bước này chỉ lưu cấu hình mapping. Chưa nhập kết quả vào hồ sơ người tham gia.</p>
+                <form data-import-upload class="file-importer__toolbar" enctype="multipart/form-data" method="post">
+                    {% csrf_token %}
+                    <label>File Excel (.xlsx, tối đa 5 MB)
+                        <input type="file" name="file" accept=".xlsx" required>
+                    </label>
+                    <label>Sheet
+                        <select name="sheet_name" aria-label="Sheet dữ liệu">
+                            <option value="">Sheet đầu tiên</option>
+                        </select>
+                    </label>
+                    <label>Dòng tiêu đề
+                        <input type="number" name="header_row" min="1" max="100" value="2" required>
+                    </label>
+                    <button type="submit" class="entity-table__footer-button entity-table__footer-button--primary">Đọc cột Excel</button>
+                </form>
+                <div class="file-importer__toolbar">
+                    <label>File đã tải gần đây
+                        <select data-import-history aria-label="File đã tải">
+                            <option value="">Chọn file để mở lại</option>
+                        </select>
+                    </label>
+                    <button type="button" class="entity-table__footer-button" data-import-reopen>Mở mapping</button>
+                </div>
+                <p role="status" aria-live="polite" data-import-status>Đang tải danh sách Visit và field…</p>
+            </aside>
+            <section class="file-importer__workspace" data-import-workspace hidden aria-label="Đối chiếu cột">
+                <h2 data-import-filename></h2>
+                <p data-import-source-info></p>
+                <p data-import-summary aria-live="polite"></p>
+                <div class="file-importer__toolbar">
+                    <label>Tìm cột
+                        <input type="search" data-import-search placeholder="Tên xét nghiệm hoặc cột Excel">
+                    </label>
+                    <label>Lý do bỏ qua các cột chưa map
+                        <input type="text" data-import-skip-reason maxlength="500" placeholder="Ví dụ: cần hỏi thêm field tương ứng">
+                    </label>
+                    <button type="button" class="entity-table__footer-button" data-import-skip-empty>Bỏ qua các cột chưa map</button>
+                </div>
+                <div class="file-importer__table-wrap" tabindex="0" role="region" aria-label="Bảng đối chiếu cột Excel">
+                    <table class="file-importer__table">
+                        <thead>
+                            <tr>
+                                <th>Cột</th>
+                                <th>Tên trong Excel</th>
+                                <th>Mẫu dữ liệu gốc (tối đa 5 ô)</th>
+                                <th>Visit / biểu mẫu / field đích</th>
+                                <th>Lý do bỏ qua</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody data-import-columns></tbody>
+                    </table>
+                </div>
+                <div class="file-importer__confirmation">
+                    <label>
+                        <input type="checkbox" data-import-acknowledge>
+                        Tôi đã đối chiếu từng cột, các Visit/field đích và các cột bỏ qua.
+                    </label>
+                    <button type="button"
+                            class="entity-table__footer-button entity-table__footer-button--primary"
+                            data-import-confirm disabled>Xác nhận và lưu mapping</button>
+                    <p>Không tự chuyển đơn vị hoặc mã định tính. Việc nhập dữ liệu vào người tham gia/lần khám sẽ là bước riêng.</p>
+                </div>
+            </section>
+        </div>
+        <dialog class="file-importer__dialog" data-import-target-dialog aria-labelledby="import-target-title">
+            <h2 id="import-target-title">Thêm field đích</h2>
+            <p data-import-target-source></p>
+            <div class="file-importer__toolbar">
+                <label>Visit<select data-import-visit></select></label>
+                <label>Biểu mẫu<select data-import-binding></select></label>
+            </div>
+            <label>Tìm field<input type="search" data-import-field-search placeholder="Mã hoặc tên field trong mọi biểu mẫu của Visit"></label>
+            <p data-import-target-message role="status"></p>
+            <div class="file-importer__fields" data-import-fields></div>
+            <div class="file-importer__toolbar">
+                <button type="button" class="entity-table__footer-button entity-table__footer-button--primary" data-import-add-target>Thêm các field đã chọn</button>
+                <button type="button" class="entity-table__footer-button" data-import-close-target>Đóng</button>
+            </div>
+        </dialog>
+    </section>
+{% endblock %}
+{% block extra_js %}
+    {{ block.super }}
+    <script src="{% static 'study/js/file_importer.js' %}"></script>
+{% endblock %}

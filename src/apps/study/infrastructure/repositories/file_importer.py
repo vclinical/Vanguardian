@@ -1,0 +1,99 @@
+import hashlib
+import json
+import os
+from pathlib import Path
+from tempfile import NamedTemporaryFile
+from uuid import UUID, uuid4
+
+from django.conf import settings
+from django.db.models import F
+from django.utils import timezone
+
+from apps.study.models import EventDefinition, EventFormBinding
+
+
+class StudyFileImporterRepository:
+    def __init__(self, root=None):
+        self.root = Path(root) if root is not None else Path(settings.BASE_DIR) / "protected_uploads" / "file_importer"
+
+    def list_bindings(self, study_id):
+        return list(EventFormBinding.objects.filter(
+            study_id=study_id, deleted=False, is_enabled=True,
+            event_definition__study_id=study_id, event_definition__deleted=False,
+            event_definition__is_enabled=True, study_version=F("event_definition__study_version"),
+            form_definition__study_id=study_id, form_definition__deleted=False, form_definition__is_active=True,
+        ).order_by("event_definition__sequence_no", "display_order", "id").values(
+            "id", "event_definition_id", "event_definition__code", "event_definition__name",
+            "form_definition_id", "form_definition__code", "study_version",
+        ))
+
+    def list_events(self, study_id):
+        return list(EventDefinition.objects.filter(
+            study_id=study_id, deleted=False, is_enabled=True,
+        ).order_by("sequence_no", "id").values("id", "code", "name"))
+
+    def _directory(self, study_id, upload_id):
+        try:
+            identifier = str(UUID(str(upload_id)))
+            study_id = int(study_id)
+        except (ValueError, TypeError, AttributeError) as exc:
+            raise ValueError("Mã file không hợp lệ.") from exc
+        return self.root / str(study_id) / identifier
+
+    @staticmethod
+    def _write_json(path, document):
+        # Publish complete JSON atomically without overwriting a concurrent confirmation.
+        with NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as target:
+            temporary = Path(target.name)
+            try:
+                json.dump(document, target, ensure_ascii=False)
+                target.flush()
+                os.fsync(target.fileno())
+                os.link(temporary, path)
+            finally:
+                temporary.unlink(missing_ok=True)
+
+    def create_upload(self, *, study_id, filename, content, preview, actor_user_id):
+        upload_id = str(uuid4())
+        directory = self._directory(study_id, upload_id)
+        directory.mkdir(parents=True, mode=0o700)
+        source = directory / "source.xlsx"
+        source.write_bytes(content)
+        source.chmod(0o600)
+        document = {"id": upload_id, "study_id": study_id, "filename": Path(filename).name[:255],
+                    "sha256": hashlib.sha256(content).hexdigest(), "uploaded_by": actor_user_id,
+                    "uploaded_at": timezone.now().isoformat(), "preview": preview}
+        self._write_json(directory / "upload.json", document)
+        return document
+
+    def get_upload(self, study_id, upload_id):
+        directory = self._directory(study_id, upload_id)
+        try:
+            document = json.loads((directory / "upload.json").read_text(encoding="utf-8"))
+            confirmation = directory / "confirmed.json"
+            document["confirmation"] = json.loads(confirmation.read_text(encoding="utf-8")) if confirmation.exists() else None
+            return document
+        except (FileNotFoundError, json.JSONDecodeError) as exc:
+            raise ValueError("Không tìm thấy file trong study này hoặc file chưa ghi xong.") from exc
+
+    def confirm(self, *, study_id, upload_id, mappings, actor_user_id):
+        record = {"mappings": mappings, "confirmed_by": actor_user_id, "confirmed_at": timezone.now().isoformat()}
+        try:
+            self._write_json(self._directory(study_id, upload_id) / "confirmed.json", record)
+        except FileExistsError as exc:
+            raise ValueError("Mapping này đã được xác nhận. Tải file lên lại để tạo phiên bản mới.") from exc
+        return record
+
+    def list_uploads(self, study_id):
+        directory = self.root / str(int(study_id))
+        if not directory.exists():
+            return []
+        records = []
+        for path in sorted(directory.glob("*/upload.json"), key=lambda p: p.stat().st_mtime, reverse=True)[:50]:
+            try:
+                record = self.get_upload(study_id, path.parent.name)
+            except ValueError:
+                continue
+            records.append({key: record[key] for key in ("id", "filename", "uploaded_at")}
+                           | {"confirmed": record["confirmation"] is not None})
+        return records

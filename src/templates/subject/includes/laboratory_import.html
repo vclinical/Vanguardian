@@ -1,0 +1,59 @@
+{% load i18n %}
+{% if subject_obj.pk and focused_event and focused_form %}
+    <button type="button"
+            class="entity-table__footer-button entity-table__footer-button--secondary"
+            data-lab-import-open>Import kết quả xét nghiệm</button>
+    <dialog data-lab-import-dialog
+            aria-labelledby="lab-import-title"
+            class="laboratory-import">
+        <h2 id="lab-import-title">Import kết quả xét nghiệm</h2>
+        <p>
+            <strong>{{ subject_display_id }}</strong> · {{ focused_event.name }} · {{ focused_form.title }}
+        </p>
+        <p>
+            Chọn file .xlsx có tiêu đề ở dòng 2 và một dòng kết quả.
+            Chỉ điền vào biểu mẫu đang mở; cột trống không xóa dữ liệu hiện có.
+            Nếu trường đang bị ẩn/khóa, hãy đóng hộp thoại và kiểm tra câu hỏi “Đã thực hiện xét nghiệm?”.
+        </p>
+        <form data-lab-import-form
+              action="{% url 'datacapture:laboratory_import_preview' study_id=subject_obj.study_id subject_id=subject_obj.pk %}"
+              method="post"
+              enctype="multipart/form-data">
+            {% csrf_token %}
+            <label for="lab-import-file">File kết quả (tối đa 2 MB)</label>
+            <input id="lab-import-file" type="file" name="file" accept=".xlsx" required>
+            <button type="submit" class="entity-table__footer-button">Xem trước</button>
+        </form>
+        <p role="status" aria-live="polite" data-lab-import-status></p>
+        <div class="laboratory-import__table">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Ô / xét nghiệm</th>
+                        <th>Kết quả gốc</th>
+                        <th>Trường CRF</th>
+                        <th>Giá trị hiện có → nhập</th>
+                        <th>Trạng thái</th>
+                    </tr>
+                </thead>
+                <tbody data-lab-import-rows></tbody>
+            </table>
+        </div>
+        <p>
+            File không có định danh người, lần khám hoặc đơn vị đo. Không tự chuyển đổi đơn vị,
+            không tự điền ngày lấy mẫu và không suy luận ý nghĩa lâm sàng.
+            Với HIV/HBsAg/HCV, chỉ nhập kết luận định tính đã ghi trong file.
+        </p>
+        <label>
+            <input type="checkbox" data-lab-import-confirm>
+            Tôi đã đối chiếu đúng người, lần khám, đơn vị của biểu mẫu và các giá trị sẽ thay thế.
+        </label>
+        <div class="laboratory-import__actions">
+            <button type="button" class="entity-table__footer-button" data-lab-import-apply disabled>
+                Điền vào biểu mẫu
+            </button>
+            <button type="button" class="entity-table__footer-button" data-lab-import-close>Đóng</button>
+        </div>
+        <p>Sau khi điền, kiểm tra biểu mẫu và nhấn Save để lưu nháp. Chưa gửi kiểm duyệt.</p>
+    </dialog>
+{% endif %}

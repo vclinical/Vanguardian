@@ -43,11 +43,13 @@ from apps.study.presentation.web.views import (
     StudyToggleStatusView,
     StudyUpdateView,
 )
+from apps.study.presentation.web.views.file_importer import StudyFileImporterView
 
 app_name = "study"
 
 
 urlpatterns = [
+    path("studies/<int:study_id>/file-importer", StudyFileImporterView.as_view(), name="study_file_importer"),
     path("studies", StudyListView.as_view(), name="study_list"),
     path("studies/new", StudyCreateView.as_view(), name="study_create"),
     path("studies/<int:study_id>", StudyDetailView.as_view(), name="study_detail"),

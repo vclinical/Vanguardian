@@ -13,6 +13,7 @@
               href="{% static 'subject/css/subject_detail_viewonly.css' %}">
     {% endif %}
     <link rel="stylesheet" href="{% static 'subject/css/_form_render.css' %}">
+    <link rel="stylesheet" href="{% static 'datacapture/css/laboratory-import.css' %}">
 {% endblock %}
 {% block dashboard_breadcrumb_prefix %}
     <a href="{{ back_url }}" class="dashboard-breadcrumb__back">
@@ -529,6 +530,7 @@
         <script src="{% static 'subject/js/subject_event_attestation.js' %}"></script>
     {% endif %}
     {% if not is_subject_detail_viewonly_mode %}
+        <script src="{% static 'datacapture/js/laboratory-import.js' %}"></script>
         <script src="{% static 'subject/js/subject_detail_event_files.js' %}"></script>
     {% endif %}
 {% endblock %}

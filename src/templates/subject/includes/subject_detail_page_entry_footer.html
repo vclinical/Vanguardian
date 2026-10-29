@@ -16,6 +16,7 @@
                 </form>
             {% endif %}
             {% if can_show_datacapture_entry_actions %}
+                {% include "subject/includes/laboratory_import.html" %}
                 <button type="button"
                         class="entity-table__footer-button entity-table__footer-button--primary"
                         data-datacapture-save>
