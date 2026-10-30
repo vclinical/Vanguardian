@@ -950,8 +950,8 @@ msgstr "Đang đọc file và so sánh dữ liệu…"
 msgid "Select a matching mapping and result row, then click Preview."
 msgstr "Cần chọn mapping và dòng kết quả phù hợp rồi bấm Xem trước."
 
-msgid "No data has been saved. Review the comparison and confirm the import. Data is saved as a draft; submitted forms create a correction draft."
-msgstr "Chưa ghi dữ liệu. Kiểm tra bảng so sánh rồi xác nhận nhập. Dữ liệu được lưu vào bản nháp; form đã submit sẽ tạo bản nháp sửa đổi."
+msgid "No data has been saved. Review the comparison and confirm the import. Changed forms will be saved and submitted."
+msgstr "Chưa ghi dữ liệu. Kiểm tra bảng so sánh rồi xác nhận nhập. Các form có thay đổi sẽ được lưu và Submit."
 
 msgid "Import is not ready. Resolve the items below and preview again. If there are no changes, no import is needed."
 msgstr "Chưa thể nhập. Xử lý các mục được báo bên dưới rồi xem trước lại; nếu không có thay đổi thì không cần nhập."
@@ -959,8 +959,8 @@ msgstr "Chưa thể nhập. Xử lý các mục được báo bên dưới rồi
 msgid "No data has been saved."
 msgstr "Chưa ghi dữ liệu."
 
-msgid "Imported {count} values into a draft."
-msgstr "Đã nhập {count} giá trị vào bản nháp."
+msgid "Imported and submitted {count} values."
+msgstr "Đã nhập và Submit {count} giá trị."
 
 msgid "The import result could not be confirmed. Preview again to compare the current data before retrying."
 msgstr "Chưa xác nhận được kết quả nhập. Hãy xem trước lại để đối chiếu dữ liệu hiện tại trước khi thử tiếp."
@@ -1112,8 +1112,8 @@ msgstr "Dữ liệu eCRF đã thay đổi sau khi xem trước. Hãy so sánh l�
 msgid "The CRF structure changed. Generate a new preview."
 msgstr "Cấu trúc CRF đã thay đổi. Hãy xem trước lại."
 
-msgid "The data was imported into an eCRF draft. It has not been submitted or certified."
-msgstr "Đã nhập dữ liệu vào bản nháp eCRF. Chưa submit/certify."
+msgid "The data was imported and submitted. It has not been certified."
+msgstr "Đã nhập và Submit dữ liệu. Chưa chứng nhận (certify)."
 
 msgid "Data entry is not allowed for this visit (%(reason)s)."
 msgstr "Visit không cho phép nhập dữ liệu (%(reason)s)."

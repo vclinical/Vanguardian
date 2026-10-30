@@ -7,7 +7,7 @@ from django.utils.translation import gettext as _
 from apps.audit.public import AuditContextAdapter
 from apps.core.form_data_document import is_canonical_form_data, set_field_value
 from apps.crf.public import CrfContextAdapter
-from apps.datacapture.application.commands.save_submit_page import SavePageCommand
+from apps.datacapture.application.commands.save_submit_page import SavePageCommand, SubmitPageCommand, SubmitFieldChangeReason
 from apps.datacapture.application.services.file_import_values import choice_options, convert_value, equivalent
 from apps.datacapture.application.services.import_validation import ImportValidationService
 from apps.datacapture.application.services.save_submit_page import DataCaptureSaveSubmitPageService
@@ -198,6 +198,7 @@ class MappedFileImportService:
                 raise StaleImportPreviewError(_("The CRF structure changed. Generate a new preview."))
             results = []
             validation_forms = []
+            submissions = []
             for form in payload["forms"].values():
                 if not form["updates"]:
                     continue
@@ -213,9 +214,19 @@ class MappedFileImportService:
                     crf_template_id=form["form_id"], event_form_binding_id=form["binding_id"], actor_user_id=actor_user_id,
                     data=json.dumps(data, ensure_ascii=False)))
                 results.append({"form_id": form["form_id"], "entry_id": result.entry_id})
+                submissions.append(SubmitPageCommand(
+                    subject_id=subject_id, visit_id=visit_id, crf_template_id=form["form_id"],
+                    event_form_binding_id=form["binding_id"], actor_user_id=actor_user_id,
+                    data=json.dumps(data, ensure_ascii=False),
+                    change_reasons=tuple(SubmitFieldChangeReason(
+                        field_key=item["field_key"], field_label=item["field_label"], reason=str(reason).strip(),
+                    ) for item in payload["changes"] if item["form_id"] == form["form_id"] and reason),
+                ))
                 validation_forms.append({"form_id": form["form_id"], "binding_id": form["binding_id"],
                     "entry_id": result.entry_id,
                     "form_code": next(i["form_code"] for i in payload["changes"] if i["form_id"] == form["form_id"])})
+            for command in submissions:
+                self.saver.submit(command)
             if validation_forms:
                 self.validation.validate(forms=validation_forms, subject_id=subject_id,
                     visit_id=visit_id, actor_user_id=actor_user_id)
@@ -223,9 +234,10 @@ class MappedFileImportService:
                 before_data={"fields": [{"field_key": i["field_key"], "form_id": i["form_id"], "value": i["old_value"]} for i in payload["changes"]]},
                 after_data={"mapping_id": payload["mapping_id"], "source_sha256": payload["source_sha256"], "filename": payload["filename"],
                             "row_number": payload["row_number"], "overrides": payload["overrides"], "changes": payload["changes"],
-                            "field_decisions": decisions, "kept_changes": kept_changes, "reason": str(reason)[:2000]})
+                            "field_decisions": decisions, "kept_changes": kept_changes, "reason": str(reason)[:2000],
+                            "entry_status": "submitted", "submitted_entries": results})
         return {"forms": results, "applied_fields": len(payload["changes"]), "kept_fields": len(kept_changes),
-                "message": _("The data was imported into an eCRF draft. It has not been submitted or certified.")
+                "message": _("The data was imported and submitted. It has not been certified.")
                 if results else _("No eCRF values were changed.")}
 
 

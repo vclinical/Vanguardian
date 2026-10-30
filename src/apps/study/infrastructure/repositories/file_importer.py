@@ -15,7 +15,7 @@ from apps.study.models import EventDefinition, EventFormBinding
 
 class StudyFileImporterRepository:
     def __init__(self, root=None):
-        self.root = Path(root) if root is not None else Path(settings.BASE_DIR) / "protected_uploads" / "file_importer"
+        self.root = Path(root) if root is not None else Path(settings.MEDIA_ROOT) / "file_importer"
 
     def list_bindings(self, study_id):
         return list(EventFormBinding.objects.filter(

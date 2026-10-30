@@ -69,5 +69,6 @@ class FileImportApplyAPIView(FileImportAPIView):
         preview = inspect_import_preview(body.get("token") or "")
         if preview.get("overwrite_count") or any(form.get("updates") and form["snapshot"].get("page_id") for form in preview.get("forms", {}).values()):
             self._scope(request, kwargs, permission="CRF.UPDATE")
+        self._scope(request, kwargs, permission="CRF.SUBMIT")
         return MappedFileImportService().apply(**scope, token=body.get("token") or "", confirmed=body.get("confirmed"),
             field_decisions=body.get("field_decisions"), reason=body.get("reason", ""))

@@ -17,6 +17,8 @@ SECURE_REFERRER_POLICY=
 SEARCH_ENGINE_INDEXING_ENABLED=
 SEARCH_ENGINE_ROBOTS_POLICY=
 TZ=
+# Protected uploads share the static/NFS mount; route this directory through the service in nginx.
+# MEDIA_ROOT=/app/static/protected_uploads
 
 # -----------------------------------------------------------------------------
 # Database and cache URLs used by django-environ
