@@ -13,13 +13,15 @@
     const option = (options || []).find((item) => String(item.value) === String(value));
     return option ? option.label + ' (' + displayValue(value) + ')' : displayValue(value);
   }
-  function mayApply(preview, confirmed, overwrite, busy) {
+  function mayApply(preview, confirmed, decisions, busy) {
+    const overwrites = (preview?.items || []).filter((item) => item.status === 'overwrite');
     return Boolean(!busy && preview && preview.status === 'preview' && preview.token &&
       preview.can_apply && !(preview.errors || []).length && confirmed &&
-      (!preview.overwrite_count || overwrite));
+      overwrites.length === (preview.overwrite_count || 0) &&
+      overwrites.every((item) => ['file', 'ecrf'].includes((decisions || {})[item.key])));
   }
-  function requestBody(preview, overwrite) {
-    return { token: preview.token, confirmed: true, confirm_overwrite: Boolean(overwrite) };
+  function requestBody(preview, decisions) {
+    return { token: preview.token, confirmed: true, field_decisions: { ...decisions } };
   }
   function selectedOption(select, value, text) {
     const option = document.createElement('option');
@@ -43,29 +45,35 @@
     const mapping = get('mapping');
     const row = get('row');
     const confirm = get('confirm');
-    const overwrite = get('overwrite');
     const apply = get('apply');
     let preview = null;
     let busy = false;
     let overrides = {};
+    let decisions = {};
     let applied = false;
 
     function updateButton() {
-      apply.disabled = !mayApply(preview, confirm.checked, overwrite.checked, busy);
+      apply.disabled = !mayApply(preview, confirm.checked, decisions, busy);
     }
     function setBusy(value) {
       busy = value;
       root.setAttribute('aria-busy', String(value));
       form.querySelectorAll('input, select, button').forEach((control) => { control.disabled = value; });
       root.querySelectorAll('[data-import-choice], [data-import-close]').forEach((control) => { control.disabled = value; });
+      root.querySelectorAll('[data-import-decision]').forEach((control) => { control.disabled = value || !preview || applied; });
       confirm.disabled = value;
-      overwrite.disabled = value;
       updateButton();
     }
     function invalidate() {
       preview = null;
       confirm.checked = false;
-      overwrite.checked = false;
+      decisions = {};
+      root.querySelectorAll('[data-import-decision]').forEach((control) => {
+        control.checked = false;
+        control.disabled = true;
+        control.closest('td').classList.remove('mapped-import__value--selected');
+        control.closest('tr').children[4].textContent = t('overwrite');
+      });
       get('confirmation').hidden = true;
       updateButton();
     }
@@ -130,6 +138,39 @@
           detail.textContent = item.error || item.skip_reason;
           tr.children[4].append(detail);
         }
+        if (item.status === 'overwrite') {
+          [['ecrf', 2, t('keepEcrf')], ['file', 3, t('useFile')]].forEach(([source, index, text]) => {
+            const cell = tr.children[index];
+            cell.classList.add('mapped-import__value-choice');
+            const label = document.createElement('label');
+            label.className = 'mapped-import__value-label';
+            const decision = document.createElement('input');
+            decision.type = 'radio';
+            decision.name = 'import-source-' + item.key;
+            decision.value = source;
+            decision.dataset.importDecision = item.key;
+            decision.setAttribute('aria-label', text + ': ' + (item.field_label || item.field_key));
+            const caption = document.createElement('span');
+            caption.textContent = text;
+            label.append(decision, caption);
+            cell.append(label);
+            decision.addEventListener('change', function () {
+              if (busy || !preview || applied || !decision.checked) return;
+              decisions[item.key] = source;
+              tr.querySelectorAll('[data-import-decision]').forEach((control) => {
+                control.checked = control.value === source;
+                control.closest('td').classList.toggle('mapped-import__value--selected', control.checked);
+              });
+              tr.children[4].textContent = text;
+              confirm.checked = false;
+              updateButton();
+            });
+            cell.addEventListener('click', function (event) {
+              if (busy || !preview || applied || decision.disabled || event.target.closest('input, select, option, label, button, a')) return;
+              decision.click();
+            });
+          });
+        }
         if (item.options && item.options.length) {
           const select = document.createElement('select');
           select.dataset.importChoice = item.key;
@@ -181,7 +222,6 @@
       get('message').textContent = t('selectionChanged');
     }));
     confirm.addEventListener('change', updateButton);
-    overwrite.addEventListener('change', updateButton);
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
       if (busy || applied || !file.files.length) return;
@@ -205,7 +245,6 @@
         renderItems(result);
         errors(result.errors || []);
         get('confirmation').hidden = result.status !== 'preview' || !result.can_apply;
-        get('overwrite-label').hidden = !result.overwrite_count;
         get('message').textContent = result.status === 'selection_required'
           ? t('selectionRequired')
           : result.can_apply
@@ -218,10 +257,10 @@
       } finally { setBusy(false); }
     });
     apply.addEventListener('click', async function () {
-      if (!mayApply(preview, confirm.checked, overwrite.checked, busy)) return;
+      if (!mayApply(preview, confirm.checked, decisions, busy)) return;
       const guard = window.DatacaptureUnsavedChangesGuard;
       if (guard && typeof guard.confirmDiscardUnsavedChanges === 'function' && !guard.confirmDiscardUnsavedChanges()) return;
-      const body = JSON.stringify(requestBody(preview, overwrite.checked));
+      const body = JSON.stringify(requestBody(preview, decisions));
       setBusy(true);
       errors([]);
       try {

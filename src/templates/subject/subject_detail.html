@@ -9,6 +9,7 @@
           href="{% static 'shared/css/components/common-table.css' %}">
     <link rel="stylesheet" href="{% static 'subject/css/subject_detail.css' %}">
     <link rel="stylesheet" href="{% static 'datacapture/css/mapped-file-import.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/components/excel-file-picker.css' %}">
     {% if is_subject_detail_viewonly_mode %}
         <link rel="stylesheet"
               href="{% static 'subject/css/subject_detail_viewonly.css' %}">
@@ -480,6 +481,7 @@
 {% block extra_js %}
     {{ block.super }}
     <script src="{% static 'datacapture/js/mapped-file-import.js' %}"></script>
+    <script src="{% static 'shared/js/components/excel-file-picker.js' %}"></script>
     {% if focused_form and not is_form_verification_mode and not is_subject_detail_viewonly_mode and not is_page_edit_locked %}
         <script src="{% static 'datacapture/js/modules/shared.js' %}"></script>
         <script src="{% static 'datacapture/js/modules/validation.js' %}"></script>

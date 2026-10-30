@@ -95,6 +95,7 @@ class SubjectAuditHistoryQueryService:
         "event_transition",
         "page_state",
         "event_gate",
+        "file_import",
     )
 
     def __init__(
@@ -133,7 +134,7 @@ class SubjectAuditHistoryQueryService:
         if subject is None:
             return None
 
-        records = []
+        records = self.repository.list_import_field_history(study_id=study_id, subject_id=subject_id)
         records.extend(
             self._build_subject_identifier_records(
                 subject_id=subject_id,
@@ -467,6 +468,7 @@ class SubjectAuditHistoryQueryService:
             "event_transition": "Event Transition",
             "page_state": "Page State",
             "event_gate": "Event Gate",
+            "file_import": "File Import",
         }
         counts = {key: 0 for key in cls.source_order}
         for record in records:

@@ -6,6 +6,7 @@
     <link rel="stylesheet" href="{% static 'shared/css/components/common-table.css' %}">
     <link rel="stylesheet" href="{% static 'shared/css/components/user-detail.css' %}">
     <link rel="stylesheet" href="{% static 'study/css/file_importer.css' %}">
+    <link rel="stylesheet" href="{% static 'shared/css/components/excel-file-picker.css' %}">
 {% endblock %}
 {% block dashboard_breadcrumb_prefix %}
     <a href="{{ detail_study.back_url }}" class="dashboard-breadcrumb__back">Studies</a>
@@ -22,9 +23,15 @@
                 <p class="file-importer__note">Bước này chỉ lưu cấu hình mapping. Chưa nhập kết quả vào hồ sơ người tham gia.</p>
                 <form data-import-upload class="file-importer__toolbar" enctype="multipart/form-data" method="post">
                     {% csrf_token %}
-                    <label>File Excel (.xlsx, tối đa 5 MB)
-                        <input type="file" name="file" accept=".xlsx" required>
-                    </label>
+                    <div class="excel-file-picker" data-excel-picker
+                         data-invalid="Chọn một file .xlsx không quá 5 MB.">
+                        <button type="button" class="entity-table__footer-button entity-table__footer-button--secondary"
+                                aria-describedby="study-excel-hint study-excel-filename">File Excel (.xlsx)</button>
+                        <input type="file" name="file" accept=".xlsx" required hidden>
+                        <p id="study-excel-hint">Kéo và thả file vào đây · Tối đa 5 MB</p>
+                        <span id="study-excel-filename" data-excel-filename role="status">Chưa chọn file</span>
+                        <p data-excel-error role="alert"></p>
+                    </div>
                     <label>Sheet
                         <select name="sheet_name" aria-label="Sheet dữ liệu">
                             <option value="">Sheet đầu tiên</option>
@@ -104,5 +111,6 @@
 {% endblock %}
 {% block extra_js %}
     {{ block.super }}
+    <script src="{% static 'shared/js/components/excel-file-picker.js' %}"></script>
     <script src="{% static 'study/js/file_importer.js' %}"></script>
 {% endblock %}

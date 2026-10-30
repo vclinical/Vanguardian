@@ -806,6 +806,30 @@ msgstr "Tôi xác nhận việc chuyển giai đoạn điều trị và thời g
 msgid "Choose a results file for the current visit. The system uses confirmed mappings from Study → File Importer. Empty cells are skipped and never clear eCRF data."
 msgstr "Chọn file kết quả cho visit đang mở. Hệ thống dùng mapping đã xác nhận trong Study → File Importer. Ô trống được bỏ qua, không xóa dữ liệu eCRF."
 
+msgid "Choose one .xlsx file no larger than 5 MB."
+msgstr "Chọn một file .xlsx không quá 5 MB."
+
+msgid "Choose which value to keep for {field}"
+msgstr "Chọn giá trị cần giữ cho {field}"
+
+msgid "Use the file value"
+msgstr "Dùng giá trị trong file"
+
+msgid "Keep the current eCRF value"
+msgstr "Giữ dữ liệu eCRF hiện tại"
+
+msgid "Choose the file value or the current eCRF value for every field requiring adjustment."
+msgstr "Chọn giá trị trong file hoặc dữ liệu eCRF hiện tại cho từng field cần xác nhận điều chỉnh."
+
+msgid "No eCRF values were changed."
+msgstr "Không thay đổi dữ liệu eCRF."
+
+msgid "Drag and drop a file here · Maximum 5 MB"
+msgstr "Kéo và thả file vào đây · Tối đa 5 MB"
+
+msgid "No file selected"
+msgstr "Chưa chọn file"
+
 msgid "Excel file (.xlsx)"
 msgstr "File Excel (.xlsx)"
 

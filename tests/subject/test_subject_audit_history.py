@@ -112,6 +112,7 @@ class SubjectAuditHistoryQueryServiceTests(SimpleTestCase):
                 "event_transition": 1,
                 "page_state": 1,
                 "event_gate": 1,
+                "file_import": 0,
             },
         )
         period_record = result["records"][1]
@@ -177,6 +178,9 @@ class SubjectAuditHistoryQueryServiceTests(SimpleTestCase):
 
 
 class _SubjectAuditHistoryRepositoryStub:
+    def list_import_field_history(self, *, study_id, subject_id):
+        return []
+
     def __init__(self):
         self.status_kwargs = None
         self.event_kwargs = None

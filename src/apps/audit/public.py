@@ -1,4 +1,5 @@
 from apps.audit.application import RecordAuditEventCommand, RecordAuditEventService
+from apps.audit.application.services.file_import_events import list_file_import_events
 
 
 def build_audit_request_context(request, *, actor_user_id=None):
@@ -65,4 +66,4 @@ class AuditContextAdapter:
         return (request.META.get("HTTP_USER_AGENT") or "").strip()[:255]
 
 
-__all__ = ["AuditContextAdapter", "build_audit_request_context"]
+__all__ = ["AuditContextAdapter", "build_audit_request_context", "list_file_import_events"]

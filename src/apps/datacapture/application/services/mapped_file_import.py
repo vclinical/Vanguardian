@@ -9,6 +9,7 @@ from apps.core.form_data_document import is_canonical_form_data, set_field_value
 from apps.crf.public import CrfContextAdapter
 from apps.datacapture.application.commands.save_submit_page import SavePageCommand
 from apps.datacapture.application.services.file_import_values import choice_options, convert_value, equivalent
+from apps.datacapture.application.services.import_validation import ImportValidationService
 from apps.datacapture.application.services.save_submit_page import DataCaptureSaveSubmitPageService
 from apps.datacapture.domain.status import DataCapturePageState
 from apps.datacapture.infrastructure.file_import.runtime import (
@@ -29,12 +30,13 @@ class StaleImportPreviewError(ValueError):
 
 
 class MappedFileImportService:
-    def __init__(self, reader=None, crf=None, capture=None, saver=None, audit=None):
+    def __init__(self, reader=None, crf=None, capture=None, saver=None, audit=None, validation=None):
         self.reader = reader or StudyFileImportReader()
         self.crf = crf or CrfContextAdapter()
         self.capture = capture or FileImportCaptureRepository()
         self.saver = saver or DataCaptureSaveSubmitPageService()
         self.audit = audit or AuditContextAdapter()
+        self.validation = validation or ImportValidationService()
 
     @staticmethod
     def _context(study_id, subject_id, visit_id):
@@ -165,15 +167,22 @@ class MappedFileImportService:
                     overwrite_count=overwrite_count, can_apply=can_apply, token=sign_preview(payload) if can_apply else None,
                     creates_correction=any(f["updates"] and f["snapshot"]["entry_status"] == "submitted" for f in forms.values()))
 
-    def apply(self, *, study_id, subject_id, visit_id, actor_user_id, token, confirmed, confirm_overwrite=False, reason=""):
+    def apply(self, *, study_id, subject_id, visit_id, actor_user_id, token, confirmed, field_decisions=None, reason=""):
         if confirmed is not True:
             raise ValueError(_("Confirm the preview before importing."))
         payload = read_preview(token)
         for key, value in dict(study_id=study_id, subject_id=subject_id, visit_id=visit_id, actor_user_id=actor_user_id).items():
             if payload.get(key) != value:
                 raise ValueError(_("The preview does not belong to this user, participant, or visit."))
-        if payload["overwrite_count"] and confirm_overwrite is not True:
-            raise ValueError(_("Compare the values and confirm overwriting the existing eCRF data."))
+        decisions = {} if field_decisions is None else field_decisions
+        overwrite_keys = {item["key"] for item in payload["changes"] if item["status"] == "overwrite"}
+        if (not isinstance(decisions, dict) or set(decisions) != overwrite_keys
+                or any(value not in ("file", "ecrf") for value in decisions.values())):
+            raise ValueError(_("Choose the file value or the current eCRF value for every field requiring adjustment."))
+        kept_changes = [item for item in payload["changes"] if decisions.get(item["key"]) == "ecrf"]
+        for item in kept_changes:
+            payload["forms"][item["key"].split(":", 1)[0]]["updates"].pop(item["field_key"])
+        payload["changes"] = [item for item in payload["changes"] if decisions.get(item["key"]) != "ecrf"]
         with self.capture.atomic_scope(subject_id, visit_id):
             event = self._context(study_id, subject_id, visit_id)
             config = self.reader.configuration(study_id, payload["mapping_id"])
@@ -188,6 +197,7 @@ class MappedFileImportService:
             if digest(schemas) != payload["schema_digest"]:
                 raise StaleImportPreviewError(_("The CRF structure changed. Generate a new preview."))
             results = []
+            validation_forms = []
             for form in payload["forms"].values():
                 if not form["updates"]:
                     continue
@@ -203,11 +213,20 @@ class MappedFileImportService:
                     crf_template_id=form["form_id"], event_form_binding_id=form["binding_id"], actor_user_id=actor_user_id,
                     data=json.dumps(data, ensure_ascii=False)))
                 results.append({"form_id": form["form_id"], "entry_id": result.entry_id})
+                validation_forms.append({"form_id": form["form_id"], "binding_id": form["binding_id"],
+                    "entry_id": result.entry_id,
+                    "form_code": next(i["form_code"] for i in payload["changes"] if i["form_id"] == form["form_id"])})
+            if validation_forms:
+                self.validation.validate(forms=validation_forms, subject_id=subject_id,
+                    visit_id=visit_id, actor_user_id=actor_user_id)
             self.audit.record_event(action="file_import", object_type="subject_event", object_id=str(visit_id), actor_user_id=actor_user_id,
                 before_data={"fields": [{"field_key": i["field_key"], "form_id": i["form_id"], "value": i["old_value"]} for i in payload["changes"]]},
                 after_data={"mapping_id": payload["mapping_id"], "source_sha256": payload["source_sha256"], "filename": payload["filename"],
-                            "row_number": payload["row_number"], "overrides": payload["overrides"], "changes": payload["changes"], "reason": str(reason)[:2000]})
-        return {"forms": results, "applied_fields": len(payload["changes"]), "message": _("The data was imported into an eCRF draft. It has not been submitted or certified.")}
+                            "row_number": payload["row_number"], "overrides": payload["overrides"], "changes": payload["changes"],
+                            "field_decisions": decisions, "kept_changes": kept_changes, "reason": str(reason)[:2000]})
+        return {"forms": results, "applied_fields": len(payload["changes"]), "kept_fields": len(kept_changes),
+                "message": _("The data was imported into an eCRF draft. It has not been submitted or certified.")
+                if results else _("No eCRF values were changed.")}
 
 
 MAX_FILE_BYTES = MAX_BYTES

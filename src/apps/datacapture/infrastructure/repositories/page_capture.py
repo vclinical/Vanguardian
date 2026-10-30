@@ -292,12 +292,13 @@ class DjangoDataCapturePageRepository:
             .first()
         )
 
-    def list_form_field_validation_rules(self, *, crf_template_id: int) -> dict[str, tuple[dict[str, object], ...]]:
+    def list_form_field_validation_rules(self, *, crf_template_id: int, include_hard: bool = False) -> dict[str, tuple[dict[str, object], ...]]:
         validation_rules_qs = CrfFieldValidationRule.objects.filter(
             deleted=False,
             mode__in=(
                 CrfFieldValidationRuleModeChoices.SOFT,
                 CrfFieldValidationRuleModeChoices.QUERY,
+                *([CrfFieldValidationRuleModeChoices.HARD] if include_hard else []),
             ),
             rule_type__in=(
                 CrfFieldValidationRuleTypeChoices.CUSTOM_EXPRESSION,

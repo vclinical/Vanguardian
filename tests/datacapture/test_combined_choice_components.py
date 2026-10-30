@@ -55,7 +55,7 @@ class CombinedChoiceComponentTests(SimpleTestCase):
                     self.assertEqual(preview["items"][0]["new_value"], "0")
                     with self.assertRaises(ValueError):
                         fixture.apply(preview)
-                    self.assertEqual(fixture.apply(preview, confirm_overwrite=True)["applied_fields"], 1)
+                    self.assertEqual(fixture.apply(preview, field_decisions={"2:4": "file"})["applied_fields"], 1)
                     self.assertEqual(json.loads(fixture.saver.save.call_args.args[0].data)["RESULT"], "0")
                 finally:
                     fixture.doCleanups()

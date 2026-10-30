@@ -149,6 +149,8 @@ class DjangoReconcileDataQueryReadRepository:
                 "result",
                 "evaluated_values_json",
                 "validation_run_id",
+                "validation_run__source",
+                "validation_run__triggered_by",
                 "severity",
                 "message",
                 "created_at",
@@ -176,8 +178,19 @@ class DjangoReconcileDataQueryReadRepository:
                     "field_instance_id": row["validation_issue__field_instance_id"],
                     "mode": row["validation_issue__mode"],
                     "result": row["result"],
-                    "evaluated_value": row["evaluated_values_json"],
+                    "evaluated_value": (
+                        row["evaluated_values_json"].get("value")
+                        if isinstance(row["evaluated_values_json"], dict) and "_validation_context" in row["evaluated_values_json"]
+                        else row["evaluated_values_json"]
+                    ),
+                    "acknowledgment_preserved": (
+                        bool(row["evaluated_values_json"].get("acknowledged"))
+                        if isinstance(row["evaluated_values_json"], dict) and "_validation_context" in row["evaluated_values_json"]
+                        else False
+                    ),
                     "validation_run_id": row["validation_run_id"],
+                    "source": row["validation_run__source"],
+                    "triggered_by": row["validation_run__triggered_by"],
                     "severity": row["severity"],
                     "message": row["message"],
                     "created_at": row["created_at"],

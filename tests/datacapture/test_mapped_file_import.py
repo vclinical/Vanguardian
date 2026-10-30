@@ -54,7 +54,8 @@ class MappedImportTests(SimpleTestCase):
         self.capture.atomic_scope = self.atomic
         self.saver, self.audit = Mock(), Mock()
         self.saver.save.return_value = SimpleNamespace(entry_id=99)
-        self.service = MappedFileImportService(reader=self.reader, crf=self.crf, capture=self.capture, saver=self.saver, audit=self.audit)
+        self.validation = Mock()
+        self.service = MappedFileImportService(reader=self.reader, crf=self.crf, capture=self.capture, saver=self.saver, audit=self.audit, validation=self.validation)
         context = patch.object(self.service, "_context", return_value=self.event)
         context.start()
         self.addCleanup(context.stop)
@@ -96,10 +97,10 @@ class MappedImportTests(SimpleTestCase):
         self.snapshot["data"]["RESULT"] = "8"
         result = self.preview()
         self.assertEqual(result["overwrite_count"], 1)
-        with self.assertRaisesMessage(ValueError, "confirm overwriting"):
+        with self.assertRaisesMessage(ValueError, "every field requiring adjustment"):
             self.apply(result)
         self.saver.save.assert_not_called()
-        self.apply(result, confirm_overwrite=True)
+        self.apply(result, field_decisions={"2:4": "file"})
 
     def test_numeric_equivalence_is_noop(self):
         self.snapshot["data"]["RESULT"] = "5.0"

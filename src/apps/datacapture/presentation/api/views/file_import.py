@@ -70,4 +70,4 @@ class FileImportApplyAPIView(FileImportAPIView):
         if preview.get("overwrite_count") or any(form.get("updates") and form["snapshot"].get("page_id") for form in preview.get("forms", {}).values()):
             self._scope(request, kwargs, permission="CRF.UPDATE")
         return MappedFileImportService().apply(**scope, token=body.get("token") or "", confirmed=body.get("confirmed"),
-            confirm_overwrite=body.get("confirm_overwrite", False), reason=body.get("reason", ""))
+            field_decisions=body.get("field_decisions"), reason=body.get("reason", ""))
