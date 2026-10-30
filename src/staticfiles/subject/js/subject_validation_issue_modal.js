@@ -130,10 +130,21 @@
     }
 
     Array.from(sourceNode.querySelectorAll('[data-validation-issue-history-message]')).forEach(function (messageNode) {
+      const eventMeta = document.createElement('div');
+      eventMeta.className = 'subject-form-verification-query-modal__message-meta';
+      eventMeta.textContent = [messageNode.dataset.messageOpenedAt, messageNode.dataset.messageStatus,
+        messageNode.dataset.messageOpenedBy].filter(Boolean).join(' · ');
+      row.appendChild(eventMeta);
       const textNode = document.createElement('p');
       textNode.className = 'subject-form-verification-query-modal__message-text';
       textNode.textContent = String(messageNode.dataset.messageText || '').trim();
       row.appendChild(textNode);
+      if (messageNode.dataset.messageValue) {
+        const eventValue = document.createElement('p');
+        eventValue.className = 'subject-form-verification-query-modal__message-text';
+        eventValue.textContent = `Value: ${messageNode.dataset.messageValue}`;
+        row.appendChild(eventValue);
+      }
     });
     return row;
   }
@@ -236,13 +247,16 @@
     setSubmitEnabled(!!acknowledgeUrl && !!listNode?.querySelector('[data-validation-issue-modal-row]'));
     modal.hidden = false;
     const firstTextarea = modal.querySelector('[data-validation-issue-modal-comment]');
-    if (firstTextarea instanceof HTMLTextAreaElement) {
+    if (firstTextarea instanceof HTMLTextAreaElement && !firstTextarea.disabled) {
       firstTextarea.focus();
+    } else {
+      closeButton?.focus();
     }
   }
 
   function closeModal() {
     modal.hidden = true;
+    if (activeTrigger?.isConnected) activeTrigger.focus();
     activeTrigger = null;
     clearRows();
     clearHistory();
@@ -426,8 +440,24 @@
   }
 
   document.addEventListener('keydown', function (event) {
+    if (modal.hidden) return;
     if (event.key === 'Escape' && !modal.hidden) {
+      event.preventDefault();
       closeModal();
+    } else if (event.key === 'Tab') {
+      const controls = Array.from(modal.querySelectorAll(
+        'button:not([disabled]), input:not([disabled]), textarea:not([disabled]), select:not([disabled]), a[href], [tabindex]:not([tabindex="-1"])'
+      )).filter(function (node) { return node.getClientRects().length > 0; });
+      const first = controls[0];
+      const last = controls[controls.length - 1];
+      if (!first) return;
+      if (!modal.contains(document.activeElement) || (event.shiftKey && document.activeElement === first)) {
+        event.preventDefault();
+        (event.shiftKey ? last : first).focus();
+      } else if (!event.shiftKey && document.activeElement === last) {
+        event.preventDefault();
+        first.focus();
+      }
     }
   });
 })();

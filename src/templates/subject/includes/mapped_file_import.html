@@ -1,0 +1,96 @@
+{% load i18n %}
+{% if focused_event and can_show_datacapture_entry_actions and not is_page_edit_locked %}
+    <dialog class="mapped-import"
+            data-mapped-import
+            data-preview-url="{% url 'datacapture:file_import_preview' study_id=subject_obj.study_id subject_id=subject_obj.pk visit_id=focused_event.id %}"
+            data-apply-url="{% url 'datacapture:file_import_apply' study_id=subject_obj.study_id subject_id=subject_obj.pk visit_id=focused_event.id %}"
+            aria-labelledby="mapped-import-title">
+        <div data-import-translations
+             data-response-error="{% trans 'Could not read the response. Check your login and reload the page.' %}"
+             data-process-error="{% trans 'Could not process the file. Preview it again.' %}"
+             data-network-error="{% trans 'Connection failed. Check your network and preview the file again.' %}"
+             data-choose-mapping="{% trans 'Select a matching mapping' %}"
+             data-mapping="{% trans 'Mapping' %}"
+             data-choose-row="{% trans 'Select the correct result row' %}"
+             data-row-summary="{% trans 'Row {row}: {values}' %}"
+             data-new="{% trans 'Import new value' %}"
+             data-overwrite="{% trans 'Overwrite confirmation required' %}"
+             data-choose-source="{% trans 'Choose which value to keep for {field}' %}"
+             data-use-file="{% trans 'Use the file value' %}"
+             data-keep-ecrf="{% trans 'Keep the current eCRF value' %}"
+             data-unchanged="{% trans 'Keep unchanged (same value)' %}"
+             data-empty="{% trans 'Skip empty cell' %}"
+             data-error="{% trans 'Action required' %}"
+             data-skipped="{% trans 'Skip according to mapping' %}"
+             data-unknown="{% trans 'Unknown' %}"
+             data-unit="{% trans 'Unit: {unit}' %}"
+             data-raw-value="{% trans 'In file: {value}' %}"
+             data-choose-value="{% trans 'Select an eCRF value for {field}' %}"
+             data-resolve-choice="{% trans 'Select a valid value, then preview again' %}"
+             data-matched-value="{% trans 'Use the matched file value' %}"
+             data-choice-changed="{% trans 'Selection changed. Click Preview to update the comparison before importing.' %}"
+             data-selection-changed="{% trans 'Click Preview to compare data for the new selection.' %}"
+             data-xlsx-only="{% trans 'Only Excel .xlsx files are supported.' %}"
+             data-reading="{% trans 'Reading the file and comparing data…' %}"
+             data-selection-required="{% trans 'Select a matching mapping and result row, then click Preview.' %}"
+             data-ready="{% trans 'No data has been saved. Review the comparison and confirm the import. Data is saved as a draft; submitted forms create a correction draft.' %}"
+             data-not-ready="{% trans 'Import is not ready. Resolve the items below and preview again. If there are no changes, no import is needed.' %}"
+             data-not-saved="{% trans 'No data has been saved.' %}"
+             data-applied="{% trans 'Imported {count} values into a draft.' %}"
+             data-apply-unconfirmed="{% trans 'The import result could not be confirmed. Preview again to compare the current data before retrying.' %}"
+             hidden></div>
+        <header class="mapped-import__header">
+            <h2 id="mapped-import-title">{% trans "Import File" %}</h2>
+            <button type="button" data-import-close aria-label="{% trans 'Close' %}">×</button>
+        </header>
+        <p>{{ subject_display_id }} · {{ focused_event.title|default:focused_event.name }}</p>
+        <p>{% trans "Choose a results file for the current visit. The system uses confirmed mappings from Study → File Importer. Empty cells are skipped and never clear eCRF data." %}</p>
+        <form data-import-upload>
+            {% csrf_token %}
+            <div class="excel-file-picker" data-excel-picker
+                 data-invalid="{% trans 'Choose one .xlsx file no larger than 5 MB.' %}">
+                <button type="button" class="entity-table__footer-button entity-table__footer-button--secondary"
+                        aria-describedby="mapped-excel-hint mapped-excel-filename">{% trans "Excel file (.xlsx)" %}</button>
+                <input id="mapped-import-file" type="file" name="file" accept=".xlsx" required hidden>
+                <p id="mapped-excel-hint">{% trans "Drag and drop a file here · Maximum 5 MB" %}</p>
+                <span id="mapped-excel-filename" data-excel-filename role="status">{% trans "No file selected" %}</span>
+                <p data-excel-error role="alert"></p>
+            </div>
+            <div class="mapped-import__selection" data-import-selection hidden>
+                <label for="mapped-import-mapping">{% trans "Mapping to apply" %}</label>
+                <select id="mapped-import-mapping" data-import-mapping></select>
+                <label for="mapped-import-row">{% trans "Result row for this subject" %}</label>
+                <select id="mapped-import-row" data-import-row></select>
+            </div>
+            <button type="submit" class="entity-table__footer-button entity-table__footer-button--secondary" data-import-preview>{% trans "Preview / update comparison" %}</button>
+        </form>
+        <p role="status" aria-live="polite" data-import-message></p>
+        <ul role="alert" data-import-errors></ul>
+        <div class="mapped-import__table-wrap" data-import-comparison hidden>
+            <table>
+                <caption>{% trans "Compare results with current eCRF data" %}</caption>
+                <thead>
+                    <tr>
+                        <th>{% trans "File column" %}</th>
+                        <th>{% trans "Form / Field" %}</th>
+                        <th>{% trans "Current eCRF value" %}</th>
+                        <th>{% trans "Value to import" %}</th>
+                        <th>{% trans "Action" %}</th>
+                    </tr>
+                </thead>
+                <tbody data-import-items></tbody>
+            </table>
+        </div>
+        <div data-import-confirmation hidden>
+            <label class="mapped-import__check">
+                <input type="checkbox" data-import-confirm>
+                <span>{% trans "I have checked the subject, visit, result row and previewed data." %}</span>
+            </label>
+        </div>
+        <footer class="mapped-import__footer">
+            <button type="button" class="entity-table__footer-button entity-table__footer-button--secondary" data-import-close>{% trans "Close" %}</button>
+            <button type="button" class="entity-table__footer-button entity-table__footer-button--primary" data-import-apply disabled>{% trans "Confirm import" %}</button>
+            <button type="button" class="entity-table__footer-button entity-table__footer-button--primary" data-import-reload hidden>{% trans "Reload eCRF" %}</button>
+        </footer>
+    </dialog>
+{% endif %}

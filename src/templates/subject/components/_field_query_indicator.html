@@ -67,6 +67,7 @@
                 <span data-validation-issue-history-message
                       data-message-dataquery-id="{{ message.dataquery_id|default:'' }}"
                       data-message-text="{{ message.text|escape }}"
+                      data-message-value="{{ message.value_snapshot|default_if_none:''|escape }}"
                       data-message-status="{{ message.status|escape }}"
                       data-message-tone="{{ message.tone|default:''|escape }}"
                       data-message-opened-by="{{ message.opened_by|escape }}"

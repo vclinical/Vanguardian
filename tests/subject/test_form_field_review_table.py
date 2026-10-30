@@ -440,8 +440,8 @@ class FormFieldReviewTableServiceTests(SimpleTestCase):
         issue_history = row["validation_issue_histories"][0]
         self.assertEqual(issue_history["label"], "Validation Issue #701")
         self.assertEqual(issue_history["messages"][0]["text"], "Soft warning")
-        self.assertEqual(issue_history["messages"][1]["text"], "đang chờ trả lời")
-        self.assertEqual(issue_history["messages"][1]["tone"], "warning")
+        self.assertEqual(len(issue_history["messages"]), 1)
+        self.assertEqual(issue_history["messages"][0]["tone"], "warning")
 
     def test_sets_active_query_answered_flag_from_reconcile_query(self):
         service = FormFieldReviewTableService(reconcile_read_service=_AnsweredQueryReadService())

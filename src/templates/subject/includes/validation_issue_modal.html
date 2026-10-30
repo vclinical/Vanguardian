@@ -44,18 +44,18 @@
                        data-validation-issue-history-empty>{% trans "No validation issue history." %}</p>
                 </div>
             </section>
-            <section class="subject-form-verification-query-modal__section">
-                <div class="subject-form-verification-query-modal__actions">
-                    {% if validation_issue_show_acknowledge %}
-                        <button type="button"
-                                class="entity-table__footer-button entity-table__footer-button--primary"
-                                data-validation-issue-modal-submit>{% trans "Acknowledge" %}</button>
-                    {% endif %}
-                    <button type="button"
-                            class="entity-table__footer-button entity-table__footer-button--secondary"
-                            data-validation-issue-modal-close>{% trans "Close" %}</button>
-                </div>
-            </section>
         </div>
+        <footer class="subject-form-validation-issue-modal__footer">
+            <div class="subject-form-verification-query-modal__actions">
+                {% if validation_issue_show_acknowledge %}
+                    <button type="button"
+                            class="entity-table__footer-button entity-table__footer-button--primary"
+                            data-validation-issue-modal-submit>{% trans "Acknowledge" %}</button>
+                {% endif %}
+                <button type="button"
+                        class="entity-table__footer-button entity-table__footer-button--secondary"
+                        data-validation-issue-modal-close>{% trans "Close" %}</button>
+            </div>
+        </footer>
     </div>
 </div>

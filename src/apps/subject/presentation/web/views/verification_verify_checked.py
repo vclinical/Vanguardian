@@ -13,6 +13,7 @@ from apps.datacapture.domain import DataCapturePageState
 from apps.datacapture.public import (
     certify_page_for_subject_visit_crf,
     finalize_page_data_for_subject_visit_crf,
+    get_current_validation_failures_for_acknowledgement,
     get_latest_submitted_page_entry_for_subject_visit_crf,
     get_page_entry_for_subject_visit_crf,
     get_page_state_contexts,
@@ -662,6 +663,11 @@ class SubjectValidationIssueAcknowledgeView(
                 page_state_id=int(page_state_id),
                 issues=normalized,
                 actor_user_id=getattr(request.user, "id", None),
+                current_failures=get_current_validation_failures_for_acknowledgement(
+                    subject_id=int(kwargs["subject_id"]), visit_id=int(kwargs["visit_id"]),
+                    crf_template_id=int(kwargs["crf_template_id"]),
+                    **_event_form_binding_kwargs_from_request(request),
+                ),
             )
         except (SubjectValidationError, DataCaptureValidationError, ValueError) as exc:
             messages = list(exc.messages) if hasattr(exc, "messages") else [str(exc)]

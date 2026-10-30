@@ -67,6 +67,23 @@ class CrfTemplateCommandServiceTests(SimpleTestCase):
 
 
 class CrfTemplateQueryServiceTests(SimpleTestCase):
+    def test_field_schema_includes_all_translation_labels_with_stable_code(self):
+        field = SimpleNamespace(
+            pk=7, field_key="LAB_BIOCHEM_GPT", label="ALT (GPT)",
+            data_type="DECIMAL", display_order=1, section_template=None,
+            translations=SimpleNamespace(all=lambda: [
+                SimpleNamespace(label="ALT (GPT)"),
+                SimpleNamespace(label="Đo hoạt độ ALT (GPT) [Máu]"),
+            ]),
+        )
+        repository = MagicMock()
+        repository.list_template_fields_with_related_config.return_value = [field]
+        repository.list_field_definitions_by_field_template_ids.return_value = []
+        repository.list_field_ui_configs_by_field_template_ids.return_value = []
+        result = CrfTemplateQueryService(repository=repository).list_template_fields_with_ui_config(template_id=2)
+        self.assertEqual(result[0]["labels"], ["ALT (GPT)", "Đo hoạt độ ALT (GPT) [Máu]"])
+        self.assertEqual(result[0]["field_key"], "LAB_BIOCHEM_GPT")
+
     def test_translated_config_columns_are_not_declared_on_master_models(self):
         field_definition_fields = {field.name for field in CrfFieldDefinition._meta.get_fields()}
         field_ui_config_fields = {field.name for field in CrfFieldUiConfig._meta.get_fields()}

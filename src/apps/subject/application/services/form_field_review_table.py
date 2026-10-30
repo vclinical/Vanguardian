@@ -865,78 +865,64 @@ class FormFieldReviewTableService:
         control_norm: str,
         label_by_value: dict[str, str],
     ) -> list[dict[str, Any]]:
-        formatted_items: list[tuple[datetime | None, int, dict[str, Any]]] = []
+        grouped: dict[object, list[dict[str, Any]]] = {}
         for issue in issues:
-            snapshot_id = issue.get("id")
-            issue_id = issue.get("validation_issue_id") or snapshot_id
-            result = str(issue.get("result") or "").strip().upper()
-            status = str(issue.get("status") or "").strip().upper()
-            created_at = issue.get("created_at")
-            resolved_at = issue.get("resolved_at")
-            evaluated_value_display = self._resolve_display_value(
-                raw_value=issue.get("evaluated_value"),
-                control_norm=control_norm,
-                label_by_value=label_by_value,
-            )
-            is_resolved = result == "PASS" or bool(resolved_at) or status in {"RESOLVED", "PASS", "CLOSED"}
-            result_label = result or status or "OPEN"
-            tone = "resolved" if is_resolved else "warning"
-            lifecycle_text = "đã xử lý" if is_resolved else "đang chờ trả lời"
-            messages = [
-                {
-                    "dataquery_id": (
-                        f"validation_issue_{issue_id}_snapshot_{snapshot_id}"
-                        if issue_id and snapshot_id
-                        else "validation_issue_snapshot"
-                    ),
-                    "text": str(issue.get("message") or "").strip(),
-                    "status": result_label,
-                    "tone": tone,
-                    "created_at": created_at,
-                    "opened_by_id": None,
-                },
-                {
-                    "dataquery_id": (
-                        f"validation_issue_{issue_id}_snapshot_{snapshot_id}"
-                        if issue_id and snapshot_id
-                        else "validation_issue_snapshot"
-                    ),
-                    "text": lifecycle_text,
-                    "status": status or result or "OPEN",
-                    "tone": tone,
-                    "created_at": resolved_at or created_at,
-                    "opened_by_id": None,
-                },
-            ]
-            formatted_items.append(
-                (
-                    created_at if isinstance(created_at, datetime) else None,
-                    int(snapshot_id or 0),
-                    {
-                        "dataquery_id": (
-                            f"validation_issue_{issue_id}_snapshot_{snapshot_id}"
-                            if issue_id and snapshot_id
-                            else "validation_issue_snapshot"
-                        ),
-                        "status": status or result or "OPEN",
-                        "label": f"Validation Issue #{issue_id}" if issue_id else "Validation Issue",
-                        "question_text": str(issue.get("message") or "").strip(),
-                        "opened_at": self._format_datetime(created_at),
-                        "closed_at": self._format_datetime(resolved_at or created_at),
-                        "value_snapshot": evaluated_value_display,
-                        "messages": self._format_query_messages(messages),
-                    },
+            grouped.setdefault(issue.get("validation_issue_id") or issue.get("id"), []).append(issue)
+        histories = []
+        for issue_id, snapshots in grouped.items():
+            snapshots.sort(key=lambda item: (
+                item.get("created_at") is not None,
+                item.get("created_at") or datetime.min,
+                int(item.get("id") or 0),
+            ))
+            messages = []
+            latest_status = "OPEN"
+            for snapshot in snapshots:
+                acknowledged = snapshot.get("source") == "VALIDATION_ISSUE_ACKNOWLEDGEMENT"
+                latest_status = "Acknowledged" if acknowledged else (
+                    str(snapshot.get("result") or snapshot.get("status") or "OPEN").strip().upper()
                 )
-            )
-        formatted_items.sort(
-            key=lambda item: (
-                item[0] is not None,
-                item[0] or datetime.min,
-                item[1],
-            ),
-            reverse=True,
-        )
-        return [item[2] for item in formatted_items]
+                if not acknowledged and snapshot.get("acknowledgment_preserved") and latest_status == "FAIL":
+                    latest_status = "Acknowledgement retained"
+                value = self._resolve_display_value(
+                    raw_value=snapshot.get("evaluated_value"), control_norm=control_norm,
+                    label_by_value=label_by_value,
+                )
+                # Format each snapshot independently so the generic query's ten-message cap
+                # cannot silently truncate a validation issue's audit history.
+                message = self._format_query_messages([{
+                    "dataquery_id": f"validation_issue_{issue_id}_snapshot_{snapshot.get('id')}",
+                    "text": snapshot.get("message"), "status": latest_status,
+                    "tone": "resolved" if acknowledged or latest_status in {"PASS", "Acknowledgement retained"} else "warning",
+                    "created_at": snapshot.get("created_at"),
+                    "opened_by_id": snapshot.get("triggered_by"),
+                }])[0]
+                timestamp = snapshot.get("created_at")
+                if timestamp is not None:
+                    local_timestamp = timezone.localtime(timestamp) if timezone.is_aware(timestamp) else timestamp
+                    message["opened_at"] = (
+                        f"{formats.date_format(local_timestamp, 'SHORT_DATE_FORMAT')} "
+                        f"{formats.time_format(local_timestamp, 'H:i:s')}"
+                    )
+                message["value_snapshot"] = value
+                messages.append(message)
+            first, last = snapshots[0], snapshots[-1]
+            histories.append({
+                "dataquery_id": f"validation_issue_{issue_id}",
+                "status": latest_status,
+                "label": f"Validation Issue #{issue_id}" if issue_id else "Validation Issue",
+                "question_text": str(first.get("message") or "").strip(),
+                "opened_at": self._format_datetime(first.get("created_at")),
+                "closed_at": self._format_datetime(last.get("created_at")),
+                "value_snapshot": messages[-1]["value_snapshot"],
+                "messages": messages,
+                "_sort": (last.get("created_at") is not None, last.get("created_at") or datetime.min,
+                          int(last.get("id") or 0)),
+            })
+        histories.sort(key=lambda history: history["_sort"], reverse=True)
+        for history in histories:
+            history.pop("_sort")
+        return histories
 
     @staticmethod
     def _normalize_control_type(control_type: object) -> str:

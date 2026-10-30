@@ -1,3 +1,5 @@
+from django.db import transaction
+
 from apps.reconcile.application import (
     ReconcileChangeReasonItem,
     ReconcileDataQueryReadService,
@@ -71,16 +73,19 @@ def list_field_template_ids_with_reconcile_validation_issues(
     )
 
 
+@transaction.atomic
 def acknowledge_reconcile_validation_issues(
     *,
     page_state_id: int,
     issues: list[dict[str, object]],
     actor_user_id: int | None,
+    current_failures: list[object] | None = None,
 ) -> dict[str, object]:
     return ReconcileDataQueryWriteService().acknowledge_validation_issues(
         page_state_id=page_state_id,
         issues=issues,
         actor_user_id=actor_user_id,
+        **({"current_failures": current_failures} if current_failures is not None else {}),
     )
 
 

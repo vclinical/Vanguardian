@@ -597,3 +597,310 @@ msgstr "Import Template Fields"
 
 msgid "Required worksheet: Template Fields."
 msgstr "Required worksheet: Template Fields."
+
+#. Module: Data Capture - Mapped File Import
+#. Files: subject/includes/mapped_file_import.html; datacapture file import services
+msgid "Choose a results file for the current visit. The system uses confirmed mappings from Study → File Importer. Empty cells are skipped and never clear eCRF data."
+msgstr "Choose a results file for the current visit. The system uses confirmed mappings from Study → File Importer. Empty cells are skipped and never clear eCRF data."
+
+msgid "Excel file (.xlsx)"
+msgstr "Excel file (.xlsx)"
+
+msgid "Mapping to apply"
+msgstr "Mapping to apply"
+
+msgid "Result row for this subject"
+msgstr "Result row for this subject"
+
+msgid "Preview / update comparison"
+msgstr "Preview / update comparison"
+
+msgid "Compare results with current eCRF data"
+msgstr "Compare results with current eCRF data"
+
+msgid "File column"
+msgstr "File column"
+
+msgid "Form / Field"
+msgstr "Form / Field"
+
+msgid "Current eCRF value"
+msgstr "Current eCRF value"
+
+msgid "Value to import"
+msgstr "Value to import"
+
+msgid "Action"
+msgstr "Action"
+
+msgid "I have checked the subject, visit, result row and previewed data."
+msgstr "I have checked the subject, visit, result row and previewed data."
+
+msgid "I have compared the values and agree to overwrite eCRF values that differ from the file."
+msgstr "I have compared the values and agree to overwrite eCRF values that differ from the file."
+
+msgid "Close"
+msgstr "Close"
+
+msgid "Confirm import"
+msgstr "Confirm import"
+
+msgid "Reload eCRF"
+msgstr "Reload eCRF"
+
+msgid "Import File"
+msgstr "Import File"
+
+msgid "Attach source file"
+msgstr "Attach source file"
+
+msgid "Could not read the response. Check your login and reload the page."
+msgstr "Could not read the response. Check your login and reload the page."
+
+msgid "Could not process the file. Preview it again."
+msgstr "Could not process the file. Preview it again."
+
+msgid "Connection failed. Check your network and preview the file again."
+msgstr "Connection failed. Check your network and preview the file again."
+
+msgid "Select a matching mapping"
+msgstr "Select a matching mapping"
+
+msgid "Mapping"
+msgstr "Mapping"
+
+msgid "Select the correct result row"
+msgstr "Select the correct result row"
+
+msgid "Row {row}: {values}"
+msgstr "Row {row}: {values}"
+
+msgid "Import new value"
+msgstr "Import new value"
+
+msgid "Overwrite confirmation required"
+msgstr "Overwrite confirmation required"
+
+msgid "Keep unchanged (same value)"
+msgstr "Keep unchanged (same value)"
+
+msgid "Skip empty cell"
+msgstr "Skip empty cell"
+
+msgid "Action required"
+msgstr "Action required"
+
+msgid "Skip according to mapping"
+msgstr "Skip according to mapping"
+
+msgid "Unknown"
+msgstr "Unknown"
+
+msgid "Unit: {unit}"
+msgstr "Unit: {unit}"
+
+msgid "In file: {value}"
+msgstr "In file: {value}"
+
+msgid "Select an eCRF value for {field}"
+msgstr "Select an eCRF value for {field}"
+
+msgid "Select a valid value, then preview again"
+msgstr "Select a valid value, then preview again"
+
+msgid "Use the matched file value"
+msgstr "Use the matched file value"
+
+msgid "Selection changed. Click Preview to update the comparison before importing."
+msgstr "Selection changed. Click Preview to update the comparison before importing."
+
+msgid "Click Preview to compare data for the new selection."
+msgstr "Click Preview to compare data for the new selection."
+
+msgid "Only Excel .xlsx files are supported."
+msgstr "Only Excel .xlsx files are supported."
+
+msgid "Reading the file and comparing data…"
+msgstr "Reading the file and comparing data…"
+
+msgid "Select a matching mapping and result row, then click Preview."
+msgstr "Select a matching mapping and result row, then click Preview."
+
+msgid "No data has been saved. Review the comparison and confirm the import. Data is saved as a draft; submitted forms create a correction draft."
+msgstr "No data has been saved. Review the comparison and confirm the import. Data is saved as a draft; submitted forms create a correction draft."
+
+msgid "Import is not ready. Resolve the items below and preview again. If there are no changes, no import is needed."
+msgstr "Import is not ready. Resolve the items below and preview again. If there are no changes, no import is needed."
+
+msgid "No data has been saved."
+msgstr "No data has been saved."
+
+msgid "Imported {count} values into a draft."
+msgstr "Imported {count} values into a draft."
+
+msgid "The import result could not be confirmed. Preview again to compare the current data before retrying."
+msgstr "The import result could not be confirmed. Preview again to compare the current data before retrying."
+
+msgid "The mapping has not been confirmed."
+msgstr "The mapping has not been confirmed."
+
+msgid "The participant was not found in this study."
+msgstr "The participant was not found in this study."
+
+msgid "Choose an .xlsx file no larger than 5 MB."
+msgstr "Choose an .xlsx file no larger than 5 MB."
+
+msgid "The import request exceeds the size limit."
+msgstr "The import request exceeds the size limit."
+
+msgid "The confirmation request must be a JSON object with a valid token."
+msgstr "The confirmation request must be a JSON object with a valid token."
+
+msgid "The preview has expired or is invalid. Generate a new preview."
+msgstr "The preview has expired or is invalid. Generate a new preview."
+
+msgid "The uncompressed Excel file exceeds 50 MB."
+msgstr "The uncompressed Excel file exceeds 50 MB."
+
+msgid "The sheet exceeds the limit of 20,000 rows or 200 columns."
+msgstr "The sheet exceeds the limit of 20,000 rows or 200 columns."
+
+msgid "The workbook exceeds 500,000 cells. Split the results into smaller files."
+msgstr "The workbook exceeds 500,000 cells. Split the results into smaller files."
+
+msgid "The .xlsx file could not be read."
+msgstr "The .xlsx file could not be read."
+
+msgid "The choice list configuration is invalid."
+msgstr "The choice list configuration is invalid."
+
+msgid "This field uses a dynamic list. Select its value directly in the eCRF."
+msgstr "This field uses a dynamic list. Select its value directly in the eCRF."
+
+msgid "Enter this multiple-choice field directly in the eCRF to specify all selected values."
+msgstr "Enter this multiple-choice field directly in the eCRF to specify all selected values."
+
+msgid "The confirmed value is not in the allowed choice list."
+msgstr "The confirmed value is not in the allowed choice list."
+
+msgid "No eCRF choice matches. Select and confirm the target value."
+msgstr "No eCRF choice matches. Select and confirm the target value."
+
+msgid "No valid choice list was found for this field."
+msgstr "No valid choice list was found for this field."
+
+msgid "Only values from an allowed choice list can be explicitly resolved."
+msgstr "Only values from an allowed choice list can be explicitly resolved."
+
+msgid "This field does not support importing values from Excel."
+msgstr "This field does not support importing values from Excel."
+
+msgid "No valid code list was found for this field."
+msgstr "No valid code list was found for this field."
+
+msgid "Enter a valid number without a unit."
+msgstr "Enter a valid number without a unit."
+
+msgid "The number is invalid for this field type."
+msgstr "The number is invalid for this field type."
+
+msgid "The number exceeds the supported length limit."
+msgstr "The number exceeds the supported length limit."
+
+msgid "A nonzero time component cannot be discarded automatically."
+msgstr "A nonzero time component cannot be discarded automatically."
+
+msgid "Dates must use the ISO YYYY-MM-DD format."
+msgstr "Dates must use the ISO YYYY-MM-DD format."
+
+msgid "Times must use the HH:MM[:SS] format."
+msgstr "Times must use the HH:MM[:SS] format."
+
+msgid "Boolean values must be true/false or 1/0."
+msgstr "Boolean values must be true/false or 1/0."
+
+msgid "The value exceeds the maximum length of this field."
+msgstr "The value exceeds the maximum length of this field."
+
+msgid "The visit does not belong to the selected participant and study."
+msgstr "The visit does not belong to the selected participant and study."
+
+msgid "This visit is locked, closed, or unavailable for data entry. Reopen it through the existing workflow."
+msgstr "This visit is locked, closed, or unavailable for data entry. Reopen it through the existing workflow."
+
+msgid "The mapping is outdated because the CRF configuration changed. Configure the mapping again."
+msgstr "The mapping is outdated because the CRF configuration changed. Configure the mapping again."
+
+msgid "A repeating form requires a specific record. Enter data in the target record instead of importing at visit level."
+msgstr "A repeating form requires a specific record. Enter data in the target record instead of importing at visit level."
+
+msgid "Choose an .xlsx file."
+msgstr "Choose an .xlsx file."
+
+msgid "No confirmed mapping matches the file structure and visit. Configure one in Study → File Importer."
+msgstr "No confirmed mapping matches the file structure and visit. Configure one in Study → File Importer."
+
+msgid "The selected mapping does not match the file and visit."
+msgstr "The selected mapping does not match the file and visit."
+
+msgid "The file contains no result rows."
+msgstr "The file contains no result rows."
+
+msgid "The selected result row is invalid."
+msgstr "The selected result row is invalid."
+
+msgid "The list of confirmed values is invalid."
+msgstr "The list of confirmed values is invalid."
+
+msgid "The confirmed value does not belong to the mapping for this visit."
+msgstr "The confirmed value does not belong to the mapping for this visit."
+
+msgid "The field was removed from the CRF. Configure the mapping again."
+msgstr "The field was removed from the CRF. Configure the mapping again."
+
+msgid "The Excel cell contains an error. Correct it before importing."
+msgstr "The Excel cell contains an error. Correct it before importing."
+
+msgid "Formula cells cannot be imported. Use their result values instead."
+msgstr "Formula cells cannot be imported. Use their result values instead."
+
+msgid "Select a repeating-group record before importing this field."
+msgstr "Select a repeating-group record before importing this field."
+
+msgid "This column does not apply to this visit."
+msgstr "This column does not apply to this visit."
+
+msgid "Confirm the preview before importing."
+msgstr "Confirm the preview before importing."
+
+msgid "The preview does not belong to this user, participant, or visit."
+msgstr "The preview does not belong to this user, participant, or visit."
+
+msgid "Compare the values and confirm overwriting the existing eCRF data."
+msgstr "Compare the values and confirm overwriting the existing eCRF data."
+
+msgid "The mapping changed. Generate a new preview."
+msgstr "The mapping changed. Generate a new preview."
+
+msgid "The eCRF data changed after the preview. Compare the values again."
+msgstr "The eCRF data changed after the preview. Compare the values again."
+
+msgid "The CRF structure changed. Generate a new preview."
+msgstr "The CRF structure changed. Generate a new preview."
+
+msgid "The data was imported into an eCRF draft. It has not been submitted or certified."
+msgstr "The data was imported into an eCRF draft. It has not been submitted or certified."
+
+msgid "Data entry is not allowed for this visit (%(reason)s)."
+msgstr "Data entry is not allowed for this visit (%(reason)s)."
+
+msgid "Form %(form_id)s is locked, verified, or certified. Reopen it through the existing workflow."
+msgstr "Form %(form_id)s is locked, verified, or certified. Reopen it through the existing workflow."
+
+#. Module: Data Capture - Mapped File Import
+#. Files: subject/includes/mapped_file_import.html; datacapture file import services
+msgid "The file identifier is invalid."
+msgstr "The file identifier is invalid."
+
+msgid "The file was not found in this study or has not finished saving."
+msgstr "The file was not found in this study or has not finished saving."
