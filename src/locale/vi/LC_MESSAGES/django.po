@@ -800,3 +800,307 @@ msgstr "Tôi xác nhận dữ liệu của giai đoạn hiện tại có thể v
 
 msgid "I confirm the clinical transition and required washout were satisfied."
 msgstr "Tôi xác nhận việc chuyển giai đoạn điều trị và thời gian washout bắt buộc đã được đáp ứng."
+
+#. Module: Data Capture - Mapped File Import
+#. Files: subject/includes/mapped_file_import.html; datacapture file import services
+msgid "Choose a results file for the current visit. The system uses confirmed mappings from Study → File Importer. Empty cells are skipped and never clear eCRF data."
+msgstr "Chọn file kết quả cho visit đang mở. Hệ thống dùng mapping đã xác nhận trong Study → File Importer. Ô trống được bỏ qua, không xóa dữ liệu eCRF."
+
+msgid "Excel file (.xlsx)"
+msgstr "File Excel (.xlsx)"
+
+msgid "Mapping to apply"
+msgstr "Mapping áp dụng"
+
+msgid "Result row for this subject"
+msgstr "Dòng kết quả của đối tượng này"
+
+msgid "Preview / update comparison"
+msgstr "Xem trước / cập nhật so sánh"
+
+msgid "Compare results with current eCRF data"
+msgstr "So sánh kết quả với dữ liệu eCRF hiện tại"
+
+msgid "File column"
+msgstr "Cột trong file"
+
+msgid "Form / Field"
+msgstr "Biểu mẫu / Trường"
+
+msgid "Current eCRF value"
+msgstr "Hiện tại trên eCRF"
+
+msgid "Value to import"
+msgstr "Giá trị sẽ nhập"
+
+msgid "Action"
+msgstr "Xử lý"
+
+msgid "I have checked the subject, visit, result row and previewed data."
+msgstr "Tôi đã kiểm tra đúng đối tượng, visit, dòng kết quả và dữ liệu xem trước."
+
+msgid "I have compared the values and agree to overwrite eCRF values that differ from the file."
+msgstr "Tôi đã so sánh và đồng ý ghi đè các giá trị eCRF khác với file."
+
+msgid "Confirm import"
+msgstr "Xác nhận nhập"
+
+msgid "Reload eCRF"
+msgstr "Tải lại eCRF"
+
+msgid "Import File"
+msgstr "Nhập từ file"
+
+msgid "Attach source file"
+msgstr "Đính kèm tài liệu nguồn"
+
+msgid "Could not read the response. Check your login and reload the page."
+msgstr "Không đọc được phản hồi. Kiểm tra đăng nhập và tải lại trang."
+
+msgid "Could not process the file. Preview it again."
+msgstr "Không thể xử lý file. Hãy xem trước lại."
+
+msgid "Connection failed. Check your network and preview the file again."
+msgstr "Kết nối thất bại. Kiểm tra mạng và xem trước file lại."
+
+msgid "Select a matching mapping"
+msgstr "Chọn mapping phù hợp"
+
+msgid "Mapping"
+msgstr "Mapping"
+
+msgid "Select the correct result row"
+msgstr "Chọn đúng dòng kết quả"
+
+msgid "Row {row}: {values}"
+msgstr "Dòng {row}: {values}"
+
+msgid "Import new value"
+msgstr "Nhập mới"
+
+msgid "Overwrite confirmation required"
+msgstr "Cần xác nhận ghi đè"
+
+msgid "Keep unchanged (same value)"
+msgstr "Giữ nguyên (giống nhau)"
+
+msgid "Skip empty cell"
+msgstr "Bỏ qua ô trống"
+
+msgid "Action required"
+msgstr "Cần xử lý"
+
+msgid "Skip according to mapping"
+msgstr "Bỏ qua theo mapping"
+
+msgid "Unknown"
+msgstr "Chưa xác định"
+
+msgid "Unit: {unit}"
+msgstr "Đơn vị: {unit}"
+
+msgid "In file: {value}"
+msgstr "Trong file: {value}"
+
+msgid "Select an eCRF value for {field}"
+msgstr "Chọn giá trị eCRF cho {field}"
+
+msgid "Select a valid value, then preview again"
+msgstr "Chọn giá trị hợp lệ rồi xem trước lại"
+
+msgid "Use the matched file value"
+msgstr "Dùng giá trị từ file (đã khớp)"
+
+msgid "Selection changed. Click Preview to update the comparison before importing."
+msgstr "Đã đổi lựa chọn. Bấm Xem trước để cập nhật so sánh trước khi nhập."
+
+msgid "Click Preview to compare data for the new selection."
+msgstr "Bấm Xem trước để tải so sánh theo lựa chọn mới."
+
+msgid "Only Excel .xlsx files are supported."
+msgstr "Chỉ hỗ trợ file Excel .xlsx."
+
+msgid "Reading the file and comparing data…"
+msgstr "Đang đọc file và so sánh dữ liệu…"
+
+msgid "Select a matching mapping and result row, then click Preview."
+msgstr "Cần chọn mapping và dòng kết quả phù hợp rồi bấm Xem trước."
+
+msgid "No data has been saved. Review the comparison and confirm the import. Data is saved as a draft; submitted forms create a correction draft."
+msgstr "Chưa ghi dữ liệu. Kiểm tra bảng so sánh rồi xác nhận nhập. Dữ liệu được lưu vào bản nháp; form đã submit sẽ tạo bản nháp sửa đổi."
+
+msgid "Import is not ready. Resolve the items below and preview again. If there are no changes, no import is needed."
+msgstr "Chưa thể nhập. Xử lý các mục được báo bên dưới rồi xem trước lại; nếu không có thay đổi thì không cần nhập."
+
+msgid "No data has been saved."
+msgstr "Chưa ghi dữ liệu."
+
+msgid "Imported {count} values into a draft."
+msgstr "Đã nhập {count} giá trị vào bản nháp."
+
+msgid "The import result could not be confirmed. Preview again to compare the current data before retrying."
+msgstr "Chưa xác nhận được kết quả nhập. Hãy xem trước lại để đối chiếu dữ liệu hiện tại trước khi thử tiếp."
+
+msgid "The mapping has not been confirmed."
+msgstr "Mapping chưa được xác nhận."
+
+msgid "The participant was not found in this study."
+msgstr "Không tìm thấy đối tượng trong study."
+
+msgid "Choose an .xlsx file no larger than 5 MB."
+msgstr "Chọn file .xlsx không quá 5 MB."
+
+msgid "The import request exceeds the size limit."
+msgstr "Yêu cầu nhập vượt giới hạn."
+
+msgid "The confirmation request must be a JSON object with a valid token."
+msgstr "Yêu cầu xác nhận phải là đối tượng JSON với token hợp lệ."
+
+msgid "The preview has expired or is invalid. Generate a new preview."
+msgstr "Bản xem trước hết hạn hoặc không hợp lệ. Hãy xem trước lại."
+
+msgid "The uncompressed Excel file exceeds 50 MB."
+msgstr "File Excel sau giải nén vượt quá 50 MB."
+
+msgid "The sheet exceeds the limit of 20,000 rows or 200 columns."
+msgstr "Sheet vượt giới hạn 20.000 dòng / 200 cột."
+
+msgid "The workbook exceeds 500,000 cells. Split the results into smaller files."
+msgstr "Workbook vượt giới hạn 500.000 ô. Hãy tách file kết quả."
+
+msgid "The .xlsx file could not be read."
+msgstr "Không đọc được file .xlsx."
+
+msgid "The choice list configuration is invalid."
+msgstr "Cấu hình danh sách lựa chọn không hợp lệ."
+
+msgid "This field uses a dynamic list. Select its value directly in the eCRF."
+msgstr "Trường dùng danh mục động; cần nhập qua lựa chọn của eCRF."
+
+msgid "Enter this multiple-choice field directly in the eCRF to specify all selected values."
+msgstr "Trường nhiều lựa chọn cần nhập qua eCRF để xác định đầy đủ giá trị."
+
+msgid "The confirmed value is not in the allowed choice list."
+msgstr "Giá trị xác nhận không thuộc danh sách lựa chọn."
+
+msgid "No eCRF choice matches. Select and confirm the target value."
+msgstr "Không khớp lựa chọn eCRF. Hãy chọn và xác nhận giá trị đích."
+
+msgid "No valid choice list was found for this field."
+msgstr "Không tìm thấy danh sách lựa chọn hợp lệ của trường."
+
+msgid "Only values from an allowed choice list can be explicitly resolved."
+msgstr "Chỉ cho phép xác nhận lại giá trị thuộc danh sách lựa chọn."
+
+msgid "This field does not support importing values from Excel."
+msgstr "Trường này không hỗ trợ nhập giá trị từ Excel."
+
+msgid "No valid code list was found for this field."
+msgstr "Không tìm thấy danh sách mã hợp lệ của trường."
+
+msgid "Enter a valid number without a unit."
+msgstr "Cần một giá trị số hợp lệ, không kèm đơn vị."
+
+msgid "The number is invalid for this field type."
+msgstr "Giá trị số không hợp lệ cho kiểu trường."
+
+msgid "The number exceeds the supported length limit."
+msgstr "Giá trị số vượt giới hạn độ dài được hỗ trợ."
+
+msgid "A nonzero time component cannot be discarded automatically."
+msgstr "Ngày có phần thời gian không được bỏ tự động."
+
+msgid "Dates must use the ISO YYYY-MM-DD format."
+msgstr "Ngày phải có định dạng ISO YYYY-MM-DD."
+
+msgid "Times must use the HH:MM[:SS] format."
+msgstr "Thời gian phải có định dạng HH:MM[:SS]."
+
+msgid "Boolean values must be true/false or 1/0."
+msgstr "Giá trị boolean phải là true/false hoặc 1/0."
+
+msgid "The value exceeds the maximum length of this field."
+msgstr "Giá trị vượt độ dài tối đa của trường."
+
+msgid "The visit does not belong to the selected participant and study."
+msgstr "Visit không thuộc đối tượng và study được chọn."
+
+msgid "This visit is locked, closed, or unavailable for data entry. Reopen it through the existing workflow."
+msgstr "Visit đã khóa/kết thúc hoặc không cho phép nhập. Cần mở lại theo luồng hiện có."
+
+msgid "The mapping is outdated because the CRF configuration changed. Configure the mapping again."
+msgstr "Mapping đã lỗi thời do cấu hình CRF thay đổi. Hãy cấu hình lại."
+
+msgid "A repeating form requires a specific record. Enter data in the target record instead of importing at visit level."
+msgstr "Biểu mẫu lặp cần chọn bản ghi cụ thể; chưa thể nhập từ cấp visit. Hãy nhập trong bản ghi đích."
+
+msgid "Choose an .xlsx file."
+msgstr "Chọn file .xlsx."
+
+msgid "No confirmed mapping matches the file structure and visit. Configure one in Study → File Importer."
+msgstr "Không có mapping đã xác nhận khớp cấu trúc file và visit. Cấu hình tại Study → File Importer."
+
+msgid "The selected mapping does not match the file and visit."
+msgstr "Mapping được chọn không khớp file và visit."
+
+msgid "The file contains no result rows."
+msgstr "File không có dòng kết quả."
+
+msgid "The selected result row is invalid."
+msgstr "Dòng kết quả được chọn không hợp lệ."
+
+msgid "The list of confirmed values is invalid."
+msgstr "Danh sách giá trị xác nhận không hợp lệ."
+
+msgid "The confirmed value does not belong to the mapping for this visit."
+msgstr "Giá trị xác nhận không thuộc mapping của visit."
+
+msgid "The field was removed from the CRF. Configure the mapping again."
+msgstr "Field đã bị xóa khỏi CRF. Hãy cấu hình lại mapping."
+
+msgid "The Excel cell contains an error. Correct it before importing."
+msgstr "Ô Excel có lỗi; hãy sửa giá trị trước khi nhập."
+
+msgid "Formula cells cannot be imported. Use their result values instead."
+msgstr "Ô công thức không được nhập; hãy dùng giá trị kết quả."
+
+msgid "Select a repeating-group record before importing this field."
+msgstr "Cần chọn bản ghi của nhóm lặp trước khi nhập trường này."
+
+msgid "This column does not apply to this visit."
+msgstr "Cột không áp dụng cho visit này."
+
+msgid "Confirm the preview before importing."
+msgstr "Cần xác nhận bản xem trước trước khi nhập."
+
+msgid "The preview does not belong to this user, participant, or visit."
+msgstr "Bản xem trước không thuộc người dùng/đối tượng/visit này."
+
+msgid "Compare the values and confirm overwriting the existing eCRF data."
+msgstr "Cần so sánh và xác nhận ghi đè dữ liệu eCRF hiện có."
+
+msgid "The mapping changed. Generate a new preview."
+msgstr "Mapping đã thay đổi. Hãy xem trước lại."
+
+msgid "The eCRF data changed after the preview. Compare the values again."
+msgstr "Dữ liệu eCRF đã thay đổi sau khi xem trước. Hãy so sánh lại."
+
+msgid "The CRF structure changed. Generate a new preview."
+msgstr "Cấu trúc CRF đã thay đổi. Hãy xem trước lại."
+
+msgid "The data was imported into an eCRF draft. It has not been submitted or certified."
+msgstr "Đã nhập dữ liệu vào bản nháp eCRF. Chưa submit/certify."
+
+msgid "Data entry is not allowed for this visit (%(reason)s)."
+msgstr "Visit không cho phép nhập dữ liệu (%(reason)s)."
+
+msgid "Form %(form_id)s is locked, verified, or certified. Reopen it through the existing workflow."
+msgstr "Biểu mẫu %(form_id)s đã khóa/verify/certify; cần mở lại theo luồng hiện có."
+
+#. Module: Data Capture - Mapped File Import
+#. Files: subject/includes/mapped_file_import.html; datacapture file import services
+msgid "The file identifier is invalid."
+msgstr "Mã file không hợp lệ."
+
+msgid "The file was not found in this study or has not finished saving."
+msgstr "Không tìm thấy file trong study này hoặc file chưa ghi xong."

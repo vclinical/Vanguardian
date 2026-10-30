@@ -8,6 +8,7 @@ from uuid import UUID, uuid4
 from django.conf import settings
 from django.db.models import F
 from django.utils import timezone
+from django.utils.translation import gettext as _
 
 from apps.study.models import EventDefinition, EventFormBinding
 
@@ -37,7 +38,7 @@ class StudyFileImporterRepository:
             identifier = str(UUID(str(upload_id)))
             study_id = int(study_id)
         except (ValueError, TypeError, AttributeError) as exc:
-            raise ValueError("Mã file không hợp lệ.") from exc
+            raise ValueError(_("The file identifier is invalid.")) from exc
         return self.root / str(study_id) / identifier
 
     @staticmethod
@@ -74,7 +75,7 @@ class StudyFileImporterRepository:
             document["confirmation"] = json.loads(confirmation.read_text(encoding="utf-8")) if confirmation.exists() else None
             return document
         except (FileNotFoundError, json.JSONDecodeError) as exc:
-            raise ValueError("Không tìm thấy file trong study này hoặc file chưa ghi xong.") from exc
+            raise ValueError(_("The file was not found in this study or has not finished saving.")) from exc
 
     def confirm(self, *, study_id, upload_id, mappings, actor_user_id):
         record = {"mappings": mappings, "confirmed_by": actor_user_id, "confirmed_at": timezone.now().isoformat()}
@@ -96,4 +97,17 @@ class StudyFileImporterRepository:
                 continue
             records.append({key: record[key] for key in ("id", "filename", "uploaded_at")}
                            | {"confirmed": record["confirmation"] is not None})
+        return records
+
+    def list_confirmed_uploads(self, study_id):
+        """Runtime lookup must include old mappings outside the UI history window."""
+        directory = self.root / str(int(study_id))
+        records = []
+        for path in sorted(directory.glob("*/confirmed.json")):
+            try:
+                record = self.get_upload(study_id, path.parent.name)
+            except ValueError:
+                continue
+            if record.get("confirmation"):
+                records.append(record)
         return records

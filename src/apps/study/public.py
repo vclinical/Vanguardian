@@ -285,3 +285,6 @@ __all__ = [
     "retract_subject_eligibility_assessment",
     "study_site_belongs_to_study",
 ]
+
+# Confirmed protocol file mappings are consumed through this read boundary.
+from apps.study.application.services.file_import_reader import StudyFileImportReader  # noqa: E402,F401

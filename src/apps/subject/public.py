@@ -341,6 +341,7 @@ def get_event_instance_snapshot(*, event_instance_id: int):
             "event_definition_id",
             "repeat_index",
             "updated_at",
+            "status",
         )
         .first()
     )

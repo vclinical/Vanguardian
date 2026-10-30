@@ -16,7 +16,6 @@
                 </form>
             {% endif %}
             {% if can_show_datacapture_entry_actions %}
-                {% include "subject/includes/laboratory_import.html" %}
                 <button type="button"
                         class="entity-table__footer-button entity-table__footer-button--primary"
                         data-datacapture-save>
@@ -53,6 +52,11 @@
                 </a>
             {% endif %}
         {% endif %}
+        {% if focused_event and can_show_datacapture_entry_actions and not is_page_edit_locked %}
+            <button type="button"
+                    class="entity-table__footer-button entity-table__footer-button--secondary"
+                    data-mapped-import-open>{% trans "Import File" %}</button>
+        {% endif %}
         {% if focused_event and event_file_import_url %}
             <form method="post"
                   action="{{ event_file_import_url }}"
@@ -75,7 +79,7 @@
                 <button type="button"
                         class="entity-table__footer-button entity-table__footer-button--secondary"
                         data-eventinstance-file-import-trigger>
-                    {% trans "Import File" %}
+                    {% trans "Attach source file" %}
                 </button>
             </form>
             {% if has_event_instance_files and event_file_preview_url %}
