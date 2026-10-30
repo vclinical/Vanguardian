@@ -131,7 +131,10 @@ class DjangoSubjectFieldAuditHistoryRepository:
                     continue
                 rows.append({
                     "sort_key": f"import:{event['id']:09d}",
-                    "audit_event": "Item data value imported (draft)",
+                    "audit_event": "Item data value imported (submitted)" if payload.get("entry_status") == "submitted"
+                        else "Item data value imported (draft)",
+                    "submitted_entry_id": next((entry["entry_id"] for entry in payload.get("submitted_entries", [])
+                        if entry["form_id"] == crf_template_id), None),
                     "changed_at": event["created_at"],
                     "changed_by": event["created_by__display_name"] or event["created_by__username"]
                         or self._user_display(event["created_by_id"], {}),
@@ -158,6 +161,7 @@ class DjangoSubjectFieldAuditHistoryRepository:
             rows.append(
                 {
                     "sort_key": f"entry:{int(entry.entry_no or 0):09d}:{int(entry.id or 0):09d}",
+                    "entry_id": entry.id,
                     "audit_event": "Item data value updated",
                     "changed_at": entry.submitted_at or entry.created_at,
                     "changed_by": self._user_display(entry.submitted_by_id or entry.created_by_id, user_display_by_id),
@@ -173,7 +177,10 @@ class DjangoSubjectFieldAuditHistoryRepository:
     def _merge_value_history(rows):
         merged = []
         current_value = ""
+        imported_entry_ids = {row["submitted_entry_id"] for row in rows if row.get("submitted_entry_id")}
         for row in sorted(rows, key=lambda item: (item["changed_at"] is not None, item["changed_at"], item["sort_key"])):
+            if row.get("entry_id") in imported_entry_ids:
+                continue
             if row["sort_key"].startswith("entry:"):
                 # Submitting the imported draft is not another value change.
                 if row["value_to"] == current_value:

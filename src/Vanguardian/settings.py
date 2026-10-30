@@ -284,6 +284,7 @@ STATICFILES_DIRS = [BASE_DIR / "staticfiles"]
 if (BASE_DIR / "node_modules").exists():
     STATICFILES_DIRS.append(BASE_DIR / "node_modules")
 STATIC_ROOT = BASE_DIR.parent / "static"
+MEDIA_ROOT = Path(env("MEDIA_ROOT", default=str(STATIC_ROOT / "protected_uploads")))
 STORAGES = {
     "default": {
         "BACKEND": "django.core.files.storage.FileSystemStorage",

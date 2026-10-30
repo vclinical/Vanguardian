@@ -44,11 +44,13 @@ class DjangoSubjectAuditHistoryRepository:
                     "value": f"{before} → {after}", "from_value": before, "to_value": after,
                     "user_display": event["created_by__display_name"] or event["created_by__username"]
                         or f"User #{event['created_by_id']}",
-                    "action": "Item data value imported (draft)", "reason": payload.get("reason", ""),
+                    "action": "Item data value imported (submitted)" if payload.get("entry_status") == "submitted"
+                        else "Item data value imported (draft)", "reason": payload.get("reason", ""),
                     "details": [{"label": "File", "value": payload.get("filename", "")},
                         {"label": "Row", "value": str(payload.get("row_number", ""))},
                         {"label": "Column", "value": change.get("column", "")},
-                        {"label": "Status", "value": "Imported into draft"}],
+                        {"label": "Status", "value": "Imported and submitted" if payload.get("entry_status") == "submitted"
+                            else "Imported into draft"}],
                 })
         return rows
 
