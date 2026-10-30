@@ -3,7 +3,7 @@
 Vanguardian is an EDC-oriented clinical research platform for managing study data and core trial operations. The system is intended to help sponsors, CROs, study teams, data managers, and operational teams manage the research data lifecycle, from user access and site data entry to auditability, data quality controls, and operational visibility.
 
 From a product perspective, Vanguardian aims to reduce data fragmentation, improve traceability, standardize access to sensitive research data, and shorten data-cleaning cycles before review, lock, or export milestones. From a technical perspective, the repository follows DDD and a modular monolith architecture, with clear bounded contexts such as `identity`, `audit`, `dashboard`, and shared platform components.
- 
+
 ## Implementation Principles
 
 - The default architecture is a modular monolith, and each bounded context must keep clear ownership and boundaries.
