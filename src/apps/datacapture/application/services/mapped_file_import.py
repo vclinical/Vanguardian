@@ -7,7 +7,7 @@ from django.utils.translation import gettext as _
 from apps.audit.public import AuditContextAdapter
 from apps.core.form_data_document import is_canonical_form_data, set_field_value
 from apps.crf.public import CrfContextAdapter
-from apps.datacapture.application.commands.save_submit_page import SavePageCommand, SubmitPageCommand, SubmitFieldChangeReason
+from apps.datacapture.application.commands.save_submit_page import SavePageCommand, SubmitFieldChangeReason, SubmitPageCommand
 from apps.datacapture.application.services.file_import_values import choice_options, convert_value, equivalent
 from apps.datacapture.application.services.import_validation import ImportValidationService
 from apps.datacapture.application.services.save_submit_page import DataCaptureSaveSubmitPageService

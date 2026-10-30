@@ -9,8 +9,8 @@ from django.test import SimpleTestCase
 from apps.datacapture.application.commands.save_submit_page import SubmitPageCommand
 from apps.datacapture.presentation.api.views.file_import import FileImportAPIView, FileImportApplyAPIView
 from apps.subject.infrastructure.repositories.field_audit_history import DjangoSubjectFieldAuditHistoryRepository
+from tests.datacapture.test_file_import_api_contract import MODULE, FileImportApiContractTests
 from tests.datacapture.test_mapped_file_import import MappedImportTests
-from tests.datacapture.test_file_import_api_contract import FileImportApiContractTests, MODULE
 
 
 class ImportSubmitTests(SimpleTestCase):
