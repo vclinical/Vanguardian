@@ -4,8 +4,9 @@ from django.db.models import Q
 from django.utils import timezone
 
 from apps.core.choices import EventExecutionModeChoices, EventInstanceStatusChoices
-from apps.study.models import EventTransitionRule
+from apps.study.models import EventTransitionRule, SubjectEligibilityAssessment
 from apps.subject.models import (
+    SubjectEnrollment,
     SubjectEventInstance,
     SubjectEventInstanceTransitionLog,
     SubjectRandomization,
@@ -51,6 +52,36 @@ class DjangoSubjectWorkflowActionRepository:
             | Q(event_definition__event_category__iexact=_EVENT_CATEGORY_WASHOUT)
         )
 
+    @staticmethod
+    def _triggerable_workflow_action_filter() -> Q:
+        failed_events = SubjectEligibilityAssessment.objects.filter(
+            deleted=False,
+            is_current=True,
+            assessment_type="SCREENING",
+            result="NOT_ELIGIBLE",
+            assessment_status__in=("FINAL", "STALE"),
+            source_context="datacapture",
+            source_object_type="EVENT_INSTANCE",
+        ).values("event_instance_id")
+        enrolled_subjects = SubjectEnrollment.objects.filter(
+            deleted=False,
+            is_enrolled=True,
+        ).values("subject_id")
+        randomized_subjects = SubjectRandomization.objects.filter(
+            deleted=False,
+            randomization_number__isnull=False,
+        ).values("subject_id")
+        recovery_candidate = (
+            Q(
+                status=EventInstanceStatusChoices.COMPLETED,
+                event_definition__code__iexact=_EVENT_CODE_ELIGIBILITY_ASSESSMENT,
+                pk__in=failed_events,
+            )
+            & ~Q(subject_id__in=enrolled_subjects)
+            & ~Q(subject_id__in=randomized_subjects)
+        )
+        return Q(status=EventInstanceStatusChoices.OPEN) | recovery_candidate
+
     def is_open_workflow_action_event(
         self,
         *,
@@ -63,9 +94,11 @@ class DjangoSubjectWorkflowActionRepository:
             study_id=study_id,
             subject_id=subject_id,
             deleted=False,
-            status=EventInstanceStatusChoices.OPEN,
             event_definition__execution_mode=EventExecutionModeChoices.WORKFLOW_ACTION,
-        ).filter(self._supported_workflow_action_filter()).exists()
+        ).filter(
+            self._supported_workflow_action_filter(),
+            self._triggerable_workflow_action_filter(),
+        ).exists()
 
     def get_open_workflow_action_context(
         self,
@@ -81,10 +114,9 @@ class DjangoSubjectWorkflowActionRepository:
                 study_id=study_id,
                 subject_id=subject_id,
                 deleted=False,
-                status=EventInstanceStatusChoices.OPEN,
                 event_definition__execution_mode=EventExecutionModeChoices.WORKFLOW_ACTION,
             )
-            .filter(self._supported_workflow_action_filter())
+            .filter(self._supported_workflow_action_filter(), self._triggerable_workflow_action_filter())
             .only(
                 "id",
                 "study_id",
@@ -119,10 +151,9 @@ class DjangoSubjectWorkflowActionRepository:
                 study_id=study_id,
                 subject_id__in=subject_id_list,
                 deleted=False,
-                status=EventInstanceStatusChoices.OPEN,
                 event_definition__execution_mode=EventExecutionModeChoices.WORKFLOW_ACTION,
             )
-            .filter(self._supported_workflow_action_filter())
+            .filter(self._supported_workflow_action_filter(), self._triggerable_workflow_action_filter())
             .only(
                 "id",
                 "study_id",
@@ -162,10 +193,9 @@ class DjangoSubjectWorkflowActionRepository:
                 study_id=study_id,
                 subject_id__in=subject_id_list,
                 deleted=False,
-                status=EventInstanceStatusChoices.OPEN,
                 event_definition__execution_mode=EventExecutionModeChoices.WORKFLOW_ACTION,
             )
-            .filter(self._supported_workflow_action_filter())
+            .filter(self._supported_workflow_action_filter(), self._triggerable_workflow_action_filter())
             .order_by("subject_id", "event_definition__sequence_no", "id")
             .values_list("subject_id", "id")
         )

@@ -11,6 +11,7 @@ from apps.subject.infrastructure.repositories.workflow_action import (
 )
 
 _EVENT_STATUS_OPEN = "open"
+_EVENT_STATUS_COMPLETED = "completed"
 _EVENT_TYPE_OPERATIONAL = "operational"
 _EXECUTION_MODE_WORKFLOW_ACTION = "workflow_action"
 _EVENT_CATEGORY_RANDOMIZATION = "randomization"
@@ -50,6 +51,12 @@ def _default_eligibility_assessment_finalizer(command):
     return finalize_subject_eligibility_assessment(command)
 
 
+def _default_eligibility_assessment_recoverer(command):
+    from apps.study.public import recover_failed_subject_eligibility_assessment
+
+    return recover_failed_subject_eligibility_assessment(command)
+
+
 def _default_subject_enroller(command):
     from apps.study.public import enroll_subject_after_eligibility_gate
 
@@ -76,12 +83,16 @@ class SubjectWorkflowActionService:
         source_event_certification_checker=None,
         transition_service=None,
         period_lifecycle_service=None,
+        eligibility_assessment_recoverer=None,
     ):
         self.repository = repository or self.repository_class()
         self.randomize_subject = randomization_slot_assigner or randomize_subject
         self.source_page_state_resolver = source_page_state_resolver or _default_source_page_state_resolver
         self.eligibility_assessment_finalizer = (
             eligibility_assessment_finalizer or _default_eligibility_assessment_finalizer
+        )
+        self.eligibility_assessment_recoverer = (
+            eligibility_assessment_recoverer or _default_eligibility_assessment_recoverer
         )
         self.subject_enroller = subject_enroller or _default_subject_enroller
         self.source_event_certification_checker = (
@@ -174,19 +185,24 @@ class SubjectWorkflowActionService:
             event = self.repository.get_event_workflow_context_for_update(event_instance_id=event_instance_id)
             if event is None:
                 return SubjectWorkflowActionResult(event_instance_id=event_instance_id, reason="event_not_found")
-            if (event.status or "").strip().lower() != _EVENT_STATUS_OPEN:
+            event_code = (event.event_code or "").strip().lower()
+            recover_failed_only = (
+                (event.status or "").strip().lower() == _EVENT_STATUS_COMPLETED
+                and event_code == _EVENT_CODE_ELIGIBILITY_ASSESSMENT
+            )
+            if (event.status or "").strip().lower() != _EVENT_STATUS_OPEN and not recover_failed_only:
                 return SubjectWorkflowActionResult(event_instance_id=event_instance_id, reason="event_not_open")
             if (event.event_type or "").strip().lower() != _EVENT_TYPE_OPERATIONAL:
                 return SubjectWorkflowActionResult(event_instance_id=event_instance_id, reason="event_not_operational")
             if (event.execution_mode or "").strip().lower() != _EXECUTION_MODE_WORKFLOW_ACTION:
                 return SubjectWorkflowActionResult(event_instance_id=event_instance_id, reason="event_not_workflow_action")
-            event_code = (event.event_code or "").strip().lower()
             if event_code == _EVENT_CODE_ELIGIBILITY_ASSESSMENT:
                 return self._execute_eligibility_assessment_workflow(
                     event=event,
                     actor_user_id=actor_user_id,
                     source_event_instance_id=source_event_instance_id,
                     automatic=automatic,
+                    recover_failed_only=recover_failed_only,
                 )
             if event_code == _EVENT_CODE_ENROLLMENT:
                 return self._execute_enrollment_workflow(
@@ -258,6 +274,7 @@ class SubjectWorkflowActionService:
         actor_user_id: int | None,
         source_event_instance_id: int | None,
         automatic: bool,
+        recover_failed_only: bool = False,
     ) -> SubjectWorkflowActionResult:
         source_event_instance_id = source_event_instance_id or (
             self.repository.resolve_source_event_instance_id_for_workflow_event(
@@ -286,7 +303,12 @@ class SubjectWorkflowActionService:
         from apps.study.public import EligibilityAssessmentPermissionError, FinalizeEligibilityAssessmentCommand
 
         try:
-            assessment = self.eligibility_assessment_finalizer(
+            finalize_assessment = (
+                self.eligibility_assessment_recoverer
+                if recover_failed_only
+                else self.eligibility_assessment_finalizer
+            )
+            assessment = finalize_assessment(
                 FinalizeEligibilityAssessmentCommand(
                     study_id=event.study_id,
                     site_id=event.site_id,
@@ -309,11 +331,16 @@ class SubjectWorkflowActionService:
                 action=_EVENT_CODE_ELIGIBILITY_ASSESSMENT,
                 reason="eligibility_permission_required",
             )
-        now = self.repository.now()
-        completed = self.repository.complete_workflow_event_instance(
+        if assessment is None:
+            return SubjectWorkflowActionResult(
+                event_instance_id=event.event_instance_id,
+                action=_EVENT_CODE_ELIGIBILITY_ASSESSMENT,
+                reason="eligibility_reassessment_not_required",
+            )
+        completed = recover_failed_only or self.repository.complete_workflow_event_instance(
             event_instance_id=event.event_instance_id,
             actor_user_id=actor_user_id,
-            now=now,
+            now=self.repository.now(),
             reason="eligibility_assessment_finalized",
         )
         if completed:
