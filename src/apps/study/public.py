@@ -98,6 +98,12 @@ def finalize_subject_eligibility_assessment(command: FinalizeEligibilityAssessme
     return EligibilityAssessmentService().finalize(command)
 
 
+def recover_failed_subject_eligibility_assessment(command: FinalizeEligibilityAssessmentCommand):
+    from apps.study.application.services.eligibility_assessment import EligibilityAssessmentService
+
+    return EligibilityAssessmentService().finalize(command, recover_failed_only=True)
+
+
 def build_eligibility_transition_facts(
     *,
     study_id: int,
@@ -264,6 +270,7 @@ __all__ = [
     "build_randomization_transition_facts",
     "enroll_subject_after_eligibility_gate",
     "finalize_subject_eligibility_assessment",
+    "recover_failed_subject_eligibility_assessment",
     "mark_subject_eligibility_stale_on_source_data_change",
     "record_event_gate_evaluation",
     "get_current_subject_treatment",

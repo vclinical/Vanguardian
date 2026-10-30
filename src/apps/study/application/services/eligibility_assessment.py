@@ -100,7 +100,12 @@ class EligibilityAssessmentService:
 
         return SubjectEligibilityWorkflowAdapter()
 
-    def finalize(self, command: FinalizeEligibilityAssessmentCommand) -> EligibilityAssessmentResult:
+    def finalize(
+        self,
+        command: FinalizeEligibilityAssessmentCommand,
+        *,
+        recover_failed_only: bool = False,
+    ) -> EligibilityAssessmentResult | None:
         self._require_permission(
             command.actor_id,
             command.study_id,
@@ -130,6 +135,12 @@ class EligibilityAssessmentService:
         evaluation = self._evaluate(command=command, facts=facts)
         now = self.repository.now()
         with self.transaction_context():
+            if recover_failed_only and not self._can_recover_failed_assessment(
+                command=command,
+                fact_snapshot=fact_snapshot,
+                evaluation=evaluation,
+            ):
+                return None
             superseded_assessments = self.repository.supersede_current_assessments(
                 subject_id=subject_scope.subject_id,
                 assessment_type=command.assessment_type,
@@ -210,6 +221,60 @@ class EligibilityAssessmentService:
             assessment_status=assessment.assessment_status,
             is_current=assessment.is_current,
             gate_result=getattr(gate_evaluation, "result", None),
+        )
+
+    def _can_recover_failed_assessment(self, *, command, fact_snapshot, evaluation) -> bool:
+        if command.force_result or evaluation.result != EligibilityResultChoices.ELIGIBLE:
+            return False
+        assessment = self.repository.get_current_assessment(
+            study_id=command.study_id,
+            subject_id=command.subject_id,
+            assessment_type=command.assessment_type,
+        )
+        if assessment is None:
+            return False
+        assessment = self.repository.get_assessment_for_update(
+            study_id=command.study_id,
+            subject_id=command.subject_id,
+            assessment_id=assessment.pk,
+        )
+        if (
+            assessment is None
+            or not assessment.is_current
+            or assessment.result != EligibilityResultChoices.NOT_ELIGIBLE
+            or assessment.assessment_status not in {
+                EligibilityAssessmentStatusChoices.FINAL,
+                EligibilityAssessmentStatusChoices.STALE,
+            }
+            or assessment.event_instance_id != command.event_instance_id
+            or assessment.source_context != command.source_context
+            or assessment.source_object_type != command.source_object_type
+            or assessment.source_object_id != command.source_object_id
+        ):
+            return False
+        source_hash = getattr(fact_snapshot, "source_data_hash", None)
+        if not source_hash or source_hash == assessment.source_data_hash:
+            return False
+        # Event snapshots hash all source pages; their reference page is simply
+        # the most recently updated page and can change after a correction.
+        if command.source_object_type != "EVENT_INSTANCE":
+            source_version = getattr(fact_snapshot, "source_data_version", None)
+            if (
+                getattr(fact_snapshot, "page_state_id", None) != assessment.source_page_state_id
+                or source_version is None
+                or assessment.source_data_version is None
+                or source_version <= assessment.source_data_version
+            ):
+                return False
+        return not (
+            self.subject_workflow_adapter.is_subject_enrolled(
+                study_id=command.study_id,
+                subject_id=command.subject_id,
+            )
+            or self.subject_workflow_adapter.is_subject_randomized(
+                study_id=command.study_id,
+                subject_id=command.subject_id,
+            )
         )
 
     def retract(self, command: RetractEligibilityAssessmentCommand) -> EligibilityAssessmentResult:
