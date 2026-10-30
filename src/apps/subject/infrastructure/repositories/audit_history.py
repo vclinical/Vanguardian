@@ -3,9 +3,11 @@ import json
 from django.db.models import CharField, OuterRef, Q, Subquery, Value
 from django.db.models.functions import Cast, Coalesce, Concat
 
+from apps.audit.public import list_file_import_events
 from apps.identity.models import User
 from apps.subject.models import (
     Subject,
+    SubjectEventInstance,
     SubjectEventInstanceTransitionLog,
     SubjectIdentifierHistory,
     SubjectPeriodTransitionLog,
@@ -15,6 +17,41 @@ from apps.subject.models import (
 
 
 class DjangoSubjectAuditHistoryRepository:
+    def list_import_field_history(self, *, study_id, subject_id):
+        visits = dict(SubjectEventInstance.objects.filter(
+            subject_id=subject_id, subject__study_id=study_id, deleted=False,
+        ).values_list("id", "event_code_snapshot"))
+        rows = []
+        for event in list_file_import_events(visit_ids=visits):
+            try:
+                payload = json.loads(event["after_data"] or "{}")
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(payload, dict) or not isinstance(payload.get("changes"), list):
+                continue
+            for change in payload["changes"]:
+                if not isinstance(change, dict) or change.get("status") not in {"new", "overwrite"}:
+                    continue
+                if payload.get("field_decisions", {}).get(change.get("key")) == "ecrf":
+                    continue
+                before = "" if change.get("old_value") is None else str(change["old_value"])
+                after = "" if change.get("new_value") is None else str(change["new_value"])
+                rows.append({
+                    "occurred_at": event["created_at"], "category": "file_import", "source": "File Import",
+                    "field_name": change.get("field_key", ""),
+                    "field_description": " / ".join(filter(None, [visits.get(int(event["object_id"])),
+                        change.get("form_code"), change.get("field_label")])),
+                    "value": f"{before} → {after}", "from_value": before, "to_value": after,
+                    "user_display": event["created_by__display_name"] or event["created_by__username"]
+                        or f"User #{event['created_by_id']}",
+                    "action": "Item data value imported (draft)", "reason": payload.get("reason", ""),
+                    "details": [{"label": "File", "value": payload.get("filename", "")},
+                        {"label": "Row", "value": str(payload.get("row_number", ""))},
+                        {"label": "Column", "value": change.get("column", "")},
+                        {"label": "Status", "value": "Imported into draft"}],
+                })
+        return rows
+
     def get_subject_context(self, *, study_id: int, subject_id: int, snapshot_class):
         subject = (
             Subject.objects.filter(study_id=study_id, pk=subject_id, deleted=False)

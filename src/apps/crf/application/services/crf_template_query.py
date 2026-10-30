@@ -185,6 +185,7 @@ class CrfTemplateQueryService:
                     "id": str(field_template.pk),
                     "field_key": field_template.field_key,
                     "label": field_label,
+                    "labels": [translation.label for translation in field_template.translations.all() if translation.label],
                     "data_type": field_template.data_type,
                     "display_order": field_template.display_order,
                     "section_template": section_payload,
@@ -206,6 +207,11 @@ class CrfTemplateQueryService:
                         "text": ui_config_text,
                         "behavior": ui_config.behavior if ui_config else None,
                         "options": ui_config_options,
+                        "options_translations": {
+                            translation.language_code: translation.options
+                            for translation in ui_config.translations.all()
+                            if translation.language_code in {"en", "vi"}
+                        } if ui_config else {},
                         "style": ui_config.style if ui_config else None,
                         "classes": ui_config.classes if ui_config else None,
                     },

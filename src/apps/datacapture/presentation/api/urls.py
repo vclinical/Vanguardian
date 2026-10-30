@@ -8,10 +8,13 @@ from apps.datacapture.presentation.api.views import (
     DataCaptureSaveAPIView,
     DataCaptureSubmitAPIView,
 )
+from apps.datacapture.presentation.api.views.file_import import FileImportApplyAPIView, FileImportPreviewAPIView
 
 app_name = "datacapture"
 
 urlpatterns = [
+    path("studies/<int:study_id>/subjects/<int:subject_id>/events/<int:visit_id>/file-import/preview/", FileImportPreviewAPIView.as_view(), name="file_import_preview"),
+    path("studies/<int:study_id>/subjects/<int:subject_id>/events/<int:visit_id>/file-import/apply/", FileImportApplyAPIView.as_view(), name="file_import_apply"),
     path(
         "studies/<int:study_id>/subjects/<int:subject_id>/events/<int:visit_id>/form-instances/",
         DataCaptureFormInstanceListCreateAPIView.as_view(),

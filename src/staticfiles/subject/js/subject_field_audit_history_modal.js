@@ -105,6 +105,7 @@
     setLoading(true);
     clearRows();
     modal.hidden = false;
+    closeButton?.focus();
 
     window
       .fetch(url, {
@@ -144,6 +145,7 @@
 
   function closeModal() {
     modal.hidden = true;
+    activeTrigger?.focus();
     activeTrigger = null;
   }
 
@@ -170,8 +172,14 @@
   }
 
   document.addEventListener('keydown', function (event) {
-    if (event.key === 'Escape' && !modal.hidden) {
+    if (modal.hidden) return;
+    if (event.key === 'Escape') {
+      event.preventDefault();
       closeModal();
+    } else if (event.key === 'Tab') {
+      // Close is the only interactive control in this read-only dialog.
+      event.preventDefault();
+      closeButton?.focus();
     }
   });
 })();

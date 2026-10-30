@@ -843,6 +843,58 @@
 
 .subject-form-validation-issue-modal {
   width: min(920px, calc(100vw - 32px));
+  max-height: 100%;
+}
+
+[data-validation-issue-modal] {
+  position: fixed;
+  padding: 16px;
+  box-sizing: border-box;
+}
+
+.subject-form-validation-issue-modal > .subject-form-verification-query-modal__header,
+.subject-form-validation-issue-modal__footer {
+  flex-shrink: 0;
+}
+
+.subject-form-validation-issue-modal > .subject-form-verification-query-modal__body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.subject-form-validation-issue-modal .subject-form-verification-query-modal__section {
+  flex-shrink: 0;
+}
+
+.subject-form-validation-issue-modal__footer {
+  padding: 12px;
+  border-top: 1px solid #d4dbe2;
+}
+
+.subject-form-validation-issue-modal__footer .subject-form-verification-query-modal__actions {
+  margin-top: 0;
+}
+
+.subject-form-validation-issue-modal .subject-form-verification-query-modal__messages {
+  max-height: none;
+  overflow: visible;
+}
+
+.subject-form-validation-issue-modal .subject-form-verification-query-modal__message {
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.subject-form-validation-issue-modal .subject-form-verification-query-modal__message-meta {
+  font-size: 13px;
+  color: #435466;
+  overflow-wrap: anywhere;
+}
+
+.subject-form-validation-issue-modal .subject-form-verification-query-modal__message-meta:not(:first-child) {
+  margin-top: 12px;
+  padding-top: 12px;
+  border-top: 1px solid #d4dce4;
 }
 
 .subject-form-validation-issue-modal__table {

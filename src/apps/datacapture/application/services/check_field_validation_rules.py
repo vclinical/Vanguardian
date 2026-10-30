@@ -1,4 +1,5 @@
 import ast
+import hashlib
 import json
 import re
 from dataclasses import dataclass
@@ -82,6 +83,7 @@ class FieldValidationFailure:
     severity: str
     message: str
     failed_value: Any
+    evaluation_context: str | None = None
 
 
 def _rule_attr(rule: Any, key: str):
@@ -337,6 +339,12 @@ def _field_validation_failure(*, field_key: str, rule, value, payload_map=None, 
         severity=rule_check.severity,
         message=rule_check.message,
         failed_value=value,
+        evaluation_context=hashlib.sha256(json.dumps({
+            "rule_type": rule_check.rule_type, "mode": rule_check.mode, "severity": rule_check.severity,
+            "expression": rule_check.expression, "value": value,
+            "evaluated_expression": _normalize_expression(rule_check.expression, value,
+                payload_map=payload_map, form_context=form_context),
+        }, sort_keys=True, ensure_ascii=False).encode()).hexdigest(),
     )
 
 
@@ -351,6 +359,8 @@ class DataCaptureFieldValidationRulesService:
         payload_data: str,
         subject_id: int | None = None,
         visit_id: int | None = None,
+        include_hard: bool = False,
+        evaluate_all: bool = False,
     ) -> FieldValidationCheckResult:
         try:
             payload_map = json.loads(payload_data or "{}")
@@ -362,7 +372,8 @@ class DataCaptureFieldValidationRulesService:
             normalize_form_data(payload_map, strict=False),
             repeat_strategy="legacy_repeat_suffix",
         )
-        rules_by_field_key = self.repository.list_form_field_validation_rules(crf_template_id=crf_template_id)
+        rules_by_field_key = self.repository.list_form_field_validation_rules(
+            crf_template_id=crf_template_id, **({"include_hard": True} if include_hard else {}))
         referenced_form_codes = _extract_referenced_form_codes(rules_by_field_key)
         form_context = (
             self.repository.get_subject_cross_form_validation_context(
@@ -400,7 +411,8 @@ class DataCaptureFieldValidationRulesService:
                 )
                 if failure is not None:
                     failures.append(failure)
-                    break
+                    if not evaluate_all:
+                        break
         failed_field_keys = tuple(sorted({failure.field_key for failure in failures}))
         return FieldValidationCheckResult(
             has_failures=bool(failures),

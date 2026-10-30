@@ -6,6 +6,7 @@ import re
 from django.utils import timezone
 from django.utils.dateparse import parse_date, parse_datetime
 
+from apps.audit.public import list_file_import_events
 from apps.core.choices import (
     DataCaptureFieldReviewStatusChoices,
     DataCaptureFieldReviewTypeChoices,
@@ -68,6 +69,11 @@ class DjangoSubjectFieldAuditHistoryRepository:
         normalized_field_key = self._resolve_field_key(field_template_id=field_template_id, field_key=field_key)
         user_display_by_id = self._load_user_display_by_id(page_state_id=page_state.pk)
         rows: list[dict] = []
+        rows.extend(self._build_file_import_rows(
+            visit_id=visit_id, crf_template_id=crf_template_id,
+            field_template_id=field_template_id, field_key=normalized_field_key,
+            event_form_binding_id=page_state.event_form_binding_id,
+        ))
         rows.extend(
             self._build_page_entry_rows(
                 page_state_id=page_state.pk,
@@ -75,6 +81,7 @@ class DjangoSubjectFieldAuditHistoryRepository:
                 user_display_by_id=user_display_by_id,
             )
         )
+        rows = self._merge_value_history(rows)
         rows.extend(
             self._build_field_review_rows(
                 page_state_id=page_state.pk,
@@ -105,26 +112,55 @@ class DjangoSubjectFieldAuditHistoryRepository:
             for row in rows
         ]
 
+    def _build_file_import_rows(self, *, visit_id, crf_template_id, field_template_id, field_key, event_form_binding_id):
+        rows = []
+        for event in list_file_import_events(visit_id=visit_id):
+            try:
+                payload = json.loads(event["after_data"] or "{}")
+            except (TypeError, ValueError):
+                continue
+            if not isinstance(payload, dict) or not isinstance(payload.get("changes"), list):
+                continue
+            for change in payload["changes"]:
+                if not isinstance(change, dict):
+                    continue
+                if (change.get("form_id") != crf_template_id or change.get("field_key") != field_key
+                        or change.get("key") != f"{event_form_binding_id}:{field_template_id}"
+                        or change.get("status") not in {"new", "overwrite"}
+                        or payload.get("field_decisions", {}).get(change["key"]) == "ecrf"):
+                    continue
+                rows.append({
+                    "sort_key": f"import:{event['id']:09d}",
+                    "audit_event": "Item data value imported (draft)",
+                    "changed_at": event["created_at"],
+                    "changed_by": event["created_by__display_name"] or event["created_by__username"]
+                        or self._user_display(event["created_by_id"], {}),
+                    "field_name": field_key,
+                    "value_from": self._display_value(change.get("old_value")),
+                    "value_to": self._display_value(change.get("new_value")),
+                })
+        return rows
+
     def _build_page_entry_rows(self, *, page_state_id: int, field_key: str, user_display_by_id: dict[int, str]) -> list[dict]:
         rows: list[dict] = []
         previous_value = ""
         entries = (
             DataCapturePageEntry.objects.filter(page_state_id=page_state_id, deleted=False)
             .exclude(status=DataCapturePageEntryStatusChoices.DRAFT)
-            .only("id", "entry_no", "data", "updated_at", "updated_by_id", "status")
+            .only("id", "entry_no", "data", "submitted_at", "submitted_by_id", "created_at", "created_by_id", "status")
             .order_by("entry_no", "id")
         )
         for entry in entries:
+            if entry.status not in {DataCapturePageEntryStatusChoices.SUBMITTED, DataCapturePageEntryStatusChoices.SUPERSEDED}:
+                continue
             payload = self._extract_entry_payload_map(entry.data)
             current_value = self._stringify_value(payload.get(field_key, ""))
-            if current_value == previous_value:
-                continue
             rows.append(
                 {
                     "sort_key": f"entry:{int(entry.entry_no or 0):09d}:{int(entry.id or 0):09d}",
                     "audit_event": "Item data value updated",
-                    "changed_at": entry.updated_at,
-                    "changed_by": self._user_display(entry.updated_by_id, user_display_by_id),
+                    "changed_at": entry.submitted_at or entry.created_at,
+                    "changed_by": self._user_display(entry.submitted_by_id or entry.created_by_id, user_display_by_id),
                     "field_name": field_key,
                     "value_from": self._display_value(previous_value),
                     "value_to": self._display_value(current_value),
@@ -132,6 +168,20 @@ class DjangoSubjectFieldAuditHistoryRepository:
             )
             previous_value = current_value
         return rows
+
+    @staticmethod
+    def _merge_value_history(rows):
+        merged = []
+        current_value = ""
+        for row in sorted(rows, key=lambda item: (item["changed_at"] is not None, item["changed_at"], item["sort_key"])):
+            if row["sort_key"].startswith("entry:"):
+                # Submitting the imported draft is not another value change.
+                if row["value_to"] == current_value:
+                    continue
+                row = {**row, "value_from": current_value}
+            merged.append(row)
+            current_value = row["value_to"]
+        return merged
 
     def _build_field_review_rows(
         self,
@@ -218,13 +268,11 @@ class DjangoSubjectFieldAuditHistoryRepository:
 
     def _load_user_display_by_id(self, *, page_state_id: int) -> dict[int, str]:
         user_ids: set[int] = set()
-        user_ids.update(
-            int(row)
-            for row in DataCapturePageEntry.objects.filter(page_state_id=page_state_id, deleted=False)
-            .exclude(status=DataCapturePageEntryStatusChoices.DRAFT)
-            .exclude(updated_by_id__isnull=True)
-            .values_list("updated_by_id", flat=True)
-        )
+        for submitted_by, created_by in DataCapturePageEntry.objects.filter(
+            page_state_id=page_state_id, deleted=False,
+        ).exclude(status=DataCapturePageEntryStatusChoices.DRAFT).values_list("submitted_by_id", "created_by_id"):
+            if submitted_by or created_by:
+                user_ids.add(int(submitted_by or created_by))
         user_ids.update(
             int(row)
             for row in DataCaptureFieldReview.objects.filter(page_state_id=page_state_id, deleted=False)

@@ -31,6 +31,7 @@ class ReconcileValidationFailureItem:
     severity: str
     message: str
     failed_value: object
+    evaluation_context: str | None = None
 
 
 class ReconcileDataQueryWriteService:
@@ -87,6 +88,7 @@ class ReconcileDataQueryWriteService:
             severity=str(getter("severity") or "").strip(),
             message=str(getter("message") or "").strip(),
             failed_value=getter("failed_value"),
+            evaluation_context=getter("evaluation_context"),
         )
 
     def create_validation_failure_records(
@@ -99,6 +101,9 @@ class ReconcileDataQueryWriteService:
         evaluated_values_json: dict[str, object] | None = None,
         data_version: int | None = None,
         related_audit_event_id: int | None = None,
+        source: str = ReconcileValidationRunSourceChoices.SUBMIT_FOR_REVIEW,
+        page_entry_id: int | None = None,
+        passed_rule_ids: set[int] | None = None,
     ) -> dict[str, int]:
         normalized_failures = [self._normalize_validation_failure(item) for item in failures]
         validation_issue_failures = [
@@ -127,7 +132,7 @@ class ReconcileDataQueryWriteService:
         normalized_data_version = int(data_version) if data_version is not None else 0
         validation_run = self.repository.create_validation_run(
             page_state_id=page_state_id,
-            source=ReconcileValidationRunSourceChoices.SUBMIT_FOR_REVIEW,
+            source=source,
             data_version=normalized_data_version,
             actor_user_id=actor_user_id,
             now=now,
@@ -144,6 +149,7 @@ class ReconcileDataQueryWriteService:
                     "severity": item.severity,
                     "message": item.message,
                     "failed_value": item.failed_value,
+                    **({"evaluation_context": item.evaluation_context} if item.evaluation_context else {}),
                 }
                 for item in validation_issue_failures
             ],
@@ -153,6 +159,7 @@ class ReconcileDataQueryWriteService:
             evaluated_values_by_field_template_id=evaluated_values_by_field_template_id,
             data_version=normalized_data_version,
             related_audit_event_id=related_audit_event_id,
+            **({"page_entry_id": page_entry_id, "passed_rule_ids": passed_rule_ids} if page_entry_id is not None else {}),
         )
 
         query_count = 0
@@ -190,12 +197,80 @@ class ReconcileDataQueryWriteService:
             "query_count": query_count,
         }
 
+    def reconcile_import_validation(
+        self, *, page_state_id, crf_template_id, entry_id, data_version,
+        failures, passed_rules, evaluated_values_json, actor_user_id,
+    ):
+        from apps.audit.public import AuditContextAdapter
+
+        audit = AuditContextAdapter()
+        normalized = [self._normalize_validation_failure(item) for item in failures]
+        audit_event = audit.record_event(
+            action="file_import_validation", object_type="page_state", object_id=str(page_state_id),
+            actor_user_id=actor_user_id,
+            after_data={"entry_id": entry_id, "values": evaluated_values_json,
+                        "failures": [item.__dict__ for item in normalized], "passed_rules": passed_rules},
+        )
+        result = self.create_validation_failure_records(
+            page_state_id=page_state_id, crf_template_id=crf_template_id,
+            failures=[item for item in normalized if item.mode != "QUERY"],
+            actor_user_id=actor_user_id, evaluated_values_json=evaluated_values_json,
+            data_version=data_version, related_audit_event_id=audit_event.pk,
+            source=ReconcileValidationRunSourceChoices.FILE_IMPORT, page_entry_id=entry_id,
+            passed_rule_ids={item["rule_id"] for item in passed_rules},
+        )
+        active_queries = self.repository.list_active_system_validation_queries(page_state_id=page_state_id)
+        active_signatures = {(item["field_template_id"], item["validation_rule_id"]) for item in active_queries}
+        now = timezone.now()
+        for failure in normalized:
+            signature = (failure.field_template_id, failure.rule_id)
+            if failure.mode != "QUERY" or failure.field_template_id is None or signature in active_signatures:
+                continue
+            query = self.repository.create_validation_open_query(
+                page_state_id=page_state_id, field_template_id=failure.field_template_id,
+                validation_rule_id=failure.rule_id, field_key=failure.field_key,
+                question_text=failure.message or "Validation rule failed.",
+                severity=self._normalize_query_severity(failure.severity),
+                actor_user_id=actor_user_id, now=now, page_entry_id=entry_id,
+            )
+            self.repository.create_query_thread_message(
+                dataquery_id=query.pk, message_text=failure.message or "Validation rule failed.",
+                message_type=_QUERY_THREAD_COMMENT, actor_user_id=actor_user_id, now=now,
+                source=_QUERY_THREAD_SOURCE_SYSTEM,
+            )
+            audit.record_event(action="query_open", object_type="dataquery", object_id=str(query.pk),
+                actor_user_id=actor_user_id, after_data={"status": "open", "source": "file_import",
+                    "entry_id": entry_id, "rule_id": failure.rule_id, "value": failure.failed_value})
+            active_signatures.add(signature)
+            result["query_count"] += 1
+        passed_signatures = {(item["field_template_id"], item["rule_id"]) for item in passed_rules}
+        result["closed_query_count"] = 0
+        for query in active_queries:
+            if (query["field_template_id"], query["validation_rule_id"]) not in passed_signatures:
+                continue
+            if not self.repository.close_passing_system_validation_query(
+                dataquery_id=query["id"], page_state_id=page_state_id, actor_user_id=actor_user_id, now=now,
+            ):
+                continue
+            message = "Imported value passed the validation rule; system query closed."
+            self.repository.create_query_thread_message(
+                dataquery_id=query["id"], message_text=message, message_type=_QUERY_THREAD_STATUS_CHANGE,
+                actor_user_id=actor_user_id, now=now, source=_QUERY_THREAD_SOURCE_SYSTEM,
+            )
+            audit.record_event(action="query_close", object_type="dataquery", object_id=str(query["id"]),
+                actor_user_id=actor_user_id, before_data={"status": query["status"]},
+                after_data={"status": "closed", "source": "file_import", "entry_id": entry_id,
+                    "rule_id": query["validation_rule_id"], "values": evaluated_values_json})
+            result["closed_query_count"] += 1
+        return result
+
     def acknowledge_validation_issues(
         self,
         *,
         page_state_id: int,
         issues: list[dict[str, object]],
         actor_user_id: int | None,
+        current_failures: list[object] | None = None,
     ) -> dict[str, object]:
         normalized_issues: list[dict[str, object]] = []
         for item in issues:
@@ -226,6 +301,8 @@ class ReconcileDataQueryWriteService:
             actor_user_id=actor_user_id,
             now=now,
             validation_run_id=int(validation_run.pk),
+            **({"current_failures": [self._normalize_validation_failure(item).__dict__ for item in current_failures]}
+               if current_failures is not None else {}),
         )
         return {
             "acknowledged_issue_ids": acknowledged_issue_ids,

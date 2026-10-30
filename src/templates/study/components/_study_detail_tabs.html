@@ -32,4 +32,9 @@
        draggable="false">
         <span class="entity-detail-tabs__label">{% trans "Manage Roles" %}</span>
     </a>
+    <a href="{% url 'study:study_file_importer' study_id=detail_study.id %}"
+       class="entity-detail-tabs__item{% if study_active_tab == 'file_importer' %} is-active{% endif %}"
+       draggable="false">
+        <span class="entity-detail-tabs__label">File Importer</span>
+    </a>
 </nav>

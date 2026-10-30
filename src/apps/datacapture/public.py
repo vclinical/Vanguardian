@@ -612,7 +612,16 @@ def ensure_draft_page_state_if_not_exists(
     )
 
 
+def get_current_validation_failures_for_acknowledgement(**scope):
+    from apps.datacapture.application.services.acknowledgement_validation import (
+        get_current_validation_failures_for_acknowledgement as evaluate,
+    )
+
+    return evaluate(**scope)
+
+
 __all__ = [
+    "get_current_validation_failures_for_acknowledgement",
     "DataCaptureFormInstanceDTO",
     "DataCapturePageStateNotFoundError",
     "attest_event_for_policy",

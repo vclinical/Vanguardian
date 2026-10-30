@@ -301,6 +301,7 @@ class DataCaptureSaveSubmitPageService:
                     "severity": failure.severity,
                     "message": failure.message,
                     "failed_value": failure.failed_value,
+                    "evaluation_context": failure.evaluation_context,
                 }
                 for failure in validation_result.failures
             ],
