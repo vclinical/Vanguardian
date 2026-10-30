@@ -1,5 +1,6 @@
 """Explicit, schema-driven scalar conversion for file imports."""
 import json
+import re
 from datetime import date, datetime, time
 from decimal import Decimal, InvalidOperation
 
@@ -24,6 +25,9 @@ def choice_options(field):
 
 def convert_value(value, field, override=None):
     text = str(value).strip()
+    combined = re.fullmatch(r"([+-]?(?:[0-9]+(?:\.[0-9]*)?|\.[0-9]+)(?:[eE][+-]?[0-9]+)?)\s*\(([^()]+)\)", text)
+    if combined and not combined[2].strip():
+        combined = None
     control = str((field.get("ui_config") or {}).get("control_type") or "").upper()
     raw_options = (field.get("ui_config") or {}).get("options")
     if isinstance(raw_options, str) and raw_options.lstrip().startswith("{"):
@@ -37,13 +41,29 @@ def convert_value(value, field, override=None):
         raise ValueError(_("Enter this multiple-choice field directly in the eCRF to specify all selected values."))
     options = choice_options(field)
     if options:
-        if control == "CHECKBOX" and len(options) > 1:
-            raise ValueError(_("Enter this multiple-choice field directly in the eCRF to specify all selected values."))
         if override is not None:
             if str(override) not in {item["value"] for item in options}:
                 raise ValueError(_("The confirmed value is not in the allowed choice list."))
             return str(override)
-        matches = {item["value"] for item in options if text.casefold() in (item["value"].casefold(), item["label"].casefold())}
+        labels = {item["value"]: {item["value"].casefold()} for item in options}
+        translated_options = list(options)
+        for language, raw in ((field.get("ui_config") or {}).get("options_translations") or {}).items():
+            if language in {"en", "vi"}:
+                translated_options.extend(choice_options({"ui_config": {"options": raw}}))
+        for item in translated_options:
+            if item["value"] in labels:
+                labels[item["value"]].add(item["label"].strip().casefold())
+        matches = {value for value, aliases in labels.items() if text.casefold() in aliases}
+        if not matches and combined:
+            parts = {combined[1].casefold(), combined[2].strip().casefold()}
+            matches = {value for value, aliases in labels.items() if parts & aliases}
+            for option_value, aliases in labels.items():
+                for alias in aliases:
+                    try:
+                        if Decimal(combined[1]) == Decimal(alias):
+                            matches.add(option_value)
+                    except InvalidOperation:
+                        continue
         if len(matches) != 1:
             raise ValueError(_("No eCRF choice matches. Select and confirm the target value."))
         return matches.pop()
@@ -58,6 +78,8 @@ def convert_value(value, field, override=None):
     if kind == "CODELIST":
         raise ValueError(_("No valid code list was found for this field."))
     if kind in {"INTEGER", "INT", "DECIMAL", "FLOAT", "NUMBER", "NUMERIC"}:
+        if combined:
+            text = combined[1]
         try:
             number = Decimal(text)
         except InvalidOperation as exc:
@@ -88,6 +110,7 @@ def convert_value(value, field, override=None):
         if text.casefold() not in {"true", "false", "1", "0"}:
             raise ValueError(_("Boolean values must be true/false or 1/0."))
         return "1" if text.casefold() in {"true", "1"} else "0"
+    text = str(value)
     maximum = field.get("text_max_length")
     if maximum and len(text) > int(maximum):
         raise ValueError(_("The value exceeds the maximum length of this field."))

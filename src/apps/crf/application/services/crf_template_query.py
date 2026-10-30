@@ -207,6 +207,11 @@ class CrfTemplateQueryService:
                         "text": ui_config_text,
                         "behavior": ui_config.behavior if ui_config else None,
                         "options": ui_config_options,
+                        "options_translations": {
+                            translation.language_code: translation.options
+                            for translation in ui_config.translations.all()
+                            if translation.language_code in {"en", "vi"}
+                        } if ui_config else {},
                         "style": ui_config.style if ui_config else None,
                         "classes": ui_config.classes if ui_config else None,
                     },

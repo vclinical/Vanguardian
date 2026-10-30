@@ -146,11 +146,11 @@ class MappedImportTests(SimpleTestCase):
 
     def test_choice_resolution_is_explicit_per_field(self):
         self.field["ui_config"] = {"options": {"source": "static", "static": [{"label": "Âm tính", "value": "0"}, {"label": "Dương tính", "value": "1"}]}}
-        result = self.preview(content=workbook("0.21 (Âm tính)"))
+        result = self.preview(content=workbook("0.21 (Unknown)"))
         self.assertFalse(result["can_apply"])
-        result = self.preview(content=workbook("0.21 (Âm tính)"), value_overrides={"2:4": "0"})
+        result = self.preview(content=workbook("0.21 (Unknown)"), value_overrides={"2:4": "0"})
         self.assertTrue(result["can_apply"])
-        self.assertEqual(result["items"][0]["raw_value"], "0.21 (Âm tính)")
+        self.assertEqual(result["items"][0]["raw_value"], "0.21 (Unknown)")
         self.assertEqual(result["items"][0]["new_value"], "0")
         self.assertFalse(self.preview(value_overrides={"2:4": "99"})["can_apply"])
 
