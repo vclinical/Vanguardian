@@ -253,7 +253,12 @@ class SubjectEventTransitionService:
         target_event = target_events_by_definition.get(decision.target_event_definition_id)
         if target_event is None:
             return
-        if str(getattr(target_event, "status", "") or "").strip().lower() != SubjectEventInstance.OPEN:
+        target_status = str(getattr(target_event, "status", "") or "").strip().lower()
+        failed_eligibility_retry = (
+            target_status == SubjectEventInstance.COMPLETED
+            and str(getattr(target_event, "event_code", "") or "").strip().lower() == "eligibility_assessment"
+        )
+        if target_status != SubjectEventInstance.OPEN and not failed_eligibility_retry:
             return
         self.workflow_action_service.execute_for_open_event(
             event_instance_id=target_event.id,
