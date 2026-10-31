@@ -104,7 +104,9 @@ function comparisonFixture() {
 
 test('clicking either value cell chooses only that source and clears acknowledgement', () => {
   const f = comparisonFixture();
-  assert.ok(f.radios.every(radio => radio.type === 'radio' && !radio.checked));
+  assert.ok(f.radios.every(radio => radio.type === 'radio'));
+  assert.equal(f.radios[0].checked, true);
+  assert.equal(f.radios[1].checked, false);
   assert.equal(f.radios[0].name, f.radios[1].name);
   assert.equal(f.nodes.items.children[1].children[2].listeners.click, undefined);
   f.click(f.current);
@@ -119,6 +121,24 @@ test('clicking either value cell chooses only that source and clears acknowledge
   assert.equal(f.current.classList.contains('mapped-import__value--selected'), false);
   assert.equal(f.incoming.classList.contains('mapped-import__value--selected'), true);
   assert.equal(f.nodes.items.children[0].children[4].textContent, 'useFile');
+});
+
+test('conflicting values default to CRF in both the controls and submitted decisions', () => {
+  const f = comparisonFixture();
+  assert.equal(f.context.decisions['2:4'], 'ecrf');
+  assert.equal(f.context.decisions['2:5'], undefined, 'empty CRF fields keep the existing import behavior');
+  assert.equal(f.current.classList.contains('mapped-import__value--selected'), true);
+  assert.equal(f.incoming.classList.contains('mapped-import__value--selected'), false);
+  assert.equal(f.nodes.items.children[0].children[4].textContent, 'keepEcrf');
+  const preview = { ...ready, overwrite_count: 1, items: [{ key: '2:4', status: 'overwrite' }] };
+  assert.equal(mayApply(preview, false, f.context.decisions, false), false);
+  assert.equal(mayApply(preview, true, f.context.decisions, false), true);
+  assert.equal(requestBody(preview, f.context.decisions).field_decisions['2:4'], 'ecrf');
+  f.click(f.incoming);
+  assert.equal(requestBody(preview, f.context.decisions).field_decisions['2:4'], 'file');
+  f.context.invalidate();
+  f.context.renderItems(preview);
+  assert.equal(f.context.decisions['2:4'], 'ecrf', 'a new preview must not reuse the previous file choice');
 });
 
 test('native radio change supports keyboard selection and option controls do not pick a source', () => {

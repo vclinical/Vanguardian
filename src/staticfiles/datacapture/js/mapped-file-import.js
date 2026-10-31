@@ -139,6 +139,8 @@
           tr.children[4].append(detail);
         }
         if (item.status === 'overwrite') {
+          decisions[item.key] = 'ecrf';
+          tr.children[4].textContent = t('keepEcrf');
           [['ecrf', 2, t('keepEcrf')], ['file', 3, t('useFile')]].forEach(([source, index, text]) => {
             const cell = tr.children[index];
             cell.classList.add('mapped-import__value-choice');
@@ -148,6 +150,8 @@
             decision.type = 'radio';
             decision.name = 'import-source-' + item.key;
             decision.value = source;
+            decision.checked = source === 'ecrf';
+            cell.classList.toggle('mapped-import__value--selected', decision.checked);
             decision.dataset.importDecision = item.key;
             decision.setAttribute('aria-label', text + ': ' + (item.field_label || item.field_key));
             const caption = document.createElement('span');
