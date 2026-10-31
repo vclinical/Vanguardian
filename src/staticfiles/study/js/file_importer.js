@@ -61,6 +61,12 @@
     return rows;
   }
 
+  function unavailableTargets(rows, bindings) {
+    const allowed = new Set(bindings.flatMap(binding => binding.fields.map(field => `${binding.id}:${field.id}`)));
+    return rows.flatMap(row => row.targets.filter(target => !allowed.has(`${target.binding_id}:${target.field_id}`))
+      .map(target => ({ column: row.column, target })));
+  }
+
   function element(tag, text, className) {
     const node = document.createElement(tag);
     if (text !== undefined) node.textContent = text;
@@ -89,14 +95,18 @@
   function updateSummary() {
     const summary = mappingSummary(mappings);
     find('summary').textContent = `${summary.mapped} cột đã map → ${summary.targets} field đích · ${summary.skipped} cột bỏ qua · ${summary.pending} cột cần xác nhận.`;
+    const invalid = unavailableTargets(mappings, catalog.bindings);
+    if (invalid.length) find('summary').textContent += ` ${invalid.length} field không còn hợp lệ ở cột ${[...new Set(invalid.map(item => item.column))].join(', ')}. Bỏ hoặc chọn lại các field này trước khi lưu.`;
     const saved = !!upload?.confirmation && !editing;
+    find('remove-unavailable').hidden = !invalid.length || saved;
+    find('remove-unavailable').disabled = loading;
     find('edit').hidden = !upload?.confirmation || editing;
     find('edit').disabled = loading;
     find('cancel-edit').hidden = !editing;
     find('cancel-edit').disabled = loading;
     find('confirm').textContent = editing ? 'Xác nhận và lưu thay đổi' : 'Xác nhận và lưu mapping';
     find('acknowledge').disabled = loading || saved;
-    find('confirm').disabled = loading || saved || !find('acknowledge').checked || summary.pending > 0 || summary.targets === 0;
+    find('confirm').disabled = loading || saved || !find('acknowledge').checked || summary.pending > 0 || summary.targets === 0 || invalid.length > 0;
     find('skip-empty').disabled = loading || saved;
     find('skip-reason').disabled = loading || saved;
   }
@@ -134,6 +144,7 @@
     const body = find('columns');
     body.replaceChildren();
     const saved = !!upload.confirmation && !editing;
+    const invalid = new Set(unavailableTargets(mappings, catalog.bindings).map(item => item.target));
     for (const column of upload.preview.columns) {
       const mapping = mappings.find(row => row.column === column.column);
       const row = element('tr');
@@ -146,6 +157,7 @@
       const destinations = element('td');
       for (const target of mapping.targets) {
         const chip = element('div', undefined, 'file-importer__target');
+        if (invalid.has(target)) chip.append(element('strong', 'Field/Visit không còn hợp lệ — bỏ field này và chọn lại.'));
         chip.append(element('strong', `${target.visit_code} · ${target.field_key}`));
         chip.append(element('small', target.field_label));
         chip.append(element('small', target.form_code));
@@ -317,17 +329,36 @@
     if (!id || loading) return;
     if (dirty && !window.confirm('Mapping hiện tại chưa được xác nhận. Mở file khác sẽ bỏ các lựa chọn chưa lưu. Tiếp tục?')) return;
     setLoading(true); status.textContent = 'Đang mở mapping…';
-    try { showUpload(await request(`${api}${encodeURIComponent(id)}/`)); }
+    try {
+      const [data, record] = await Promise.all([request(api), request(`${api}${encodeURIComponent(id)}/`)]);
+      catalog = data.catalog;
+      showUpload(record);
+    }
     catch (error) { status.textContent = error.message; }
     finally { setLoading(false); }
   });
 
-  find('edit').addEventListener('click', () => {
+  find('edit').addEventListener('click', async () => {
     if (loading || !upload?.confirmation || editing) return;
-    editing = true;
-    find('acknowledge').checked = false;
-    renderColumns();
-    status.textContent = 'Đang chỉnh sửa mapping. Xác nhận và lưu thay đổi để áp dụng cho lần nhập tiếp theo; dữ liệu đã nhập không thay đổi.';
+    setLoading(true);
+    try {
+      const data = await request(api);
+      catalog = data.catalog;
+      editing = true;
+      find('acknowledge').checked = false;
+      renderColumns();
+      status.textContent = 'Đang chỉnh sửa mapping. Kiểm tra các field không còn hợp lệ trong bảng; bỏ hoặc chọn lại trước khi lưu.';
+    } catch (error) { status.textContent = error.message; }
+    finally { setLoading(false); }
+  });
+
+  find('remove-unavailable').addEventListener('click', () => {
+    if (loading || !upload || (upload.confirmation && !editing)) return;
+    const invalid = new Set(unavailableTargets(mappings, catalog.bindings).map(item => item.target));
+    if (!invalid.size || !window.confirm(`Bỏ ${invalid.size} field không còn hợp lệ? Các cột không còn field cần chọn lại hoặc ghi lý do bỏ qua.`)) return;
+    mappings.forEach(row => { row.targets = row.targets.filter(target => !invalid.has(target)); });
+    changed(); renderColumns();
+    status.textContent = 'Đã bỏ các field không còn hợp lệ khỏi bản chỉnh sửa. Chọn field mới hoặc ghi lý do bỏ qua cho các cột còn trống, rồi xác nhận và lưu.';
   });
 
   find('cancel-edit').addEventListener('click', () => {
@@ -339,6 +370,7 @@
   find('confirm').addEventListener('click', async () => {
     const summary = mappingSummary(mappings);
     if (loading || !upload || (upload.confirmation && !editing) || !find('acknowledge').checked || summary.pending || !summary.targets) return;
+    if (unavailableTargets(mappings, catalog.bindings).length) return;
     setLoading(true); status.textContent = 'Đang kiểm tra Visit/field và lưu mapping…';
     try {
       const confirmation = await request(`${api}${upload.id}/confirm/`, { method: 'POST',

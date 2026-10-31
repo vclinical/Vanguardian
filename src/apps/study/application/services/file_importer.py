@@ -73,7 +73,10 @@ class StudyFileImporterService:
                     raise ValueError("Mã binding/field phải là số nguyên.")
                 key = (binding_id, field_id)
                 if key not in allowed:
-                    raise ValueError("Field/Visit không thuộc study này, đã ngừng dùng hoặc chưa được gắn biểu mẫu.")
+                    raise ValueError(
+                        f"Cột {column}: binding {binding_id}, field {field_id} không thuộc study này, "
+                        "đã ngừng dùng hoặc chưa được gắn biểu mẫu. Mở lại mapping, bỏ field không còn hợp lệ và chọn lại."
+                    )
                 if key in seen_targets:
                     raise ValueError("Một field trong cùng biểu mẫu/Visit không được nhận từ hai cột hoặc được chọn trùng.")
                 seen_targets.add(key)

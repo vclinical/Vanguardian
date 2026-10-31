@@ -189,7 +189,7 @@ class FileImporterServiceTests(SimpleTestCase):
     def test_edit_revalidates_mapping_and_preserves_original_on_failure(self):
         original = self.confirm()
         self.repository.list_bindings.return_value = []
-        with self.assertRaisesMessage(ValueError, "không thuộc study"):
+        with self.assertRaisesMessage(ValueError, "Cột A: binding 10, field 101"):
             self.service.confirm(study_id=3, upload_id=self.upload["id"], mappings=self.mapping,
                                  actor_user_id=8, expected_confirmed_at=original["confirmed_at"])
         self.assertEqual(self.repository.get_upload(3, self.upload["id"])["confirmation"], original)

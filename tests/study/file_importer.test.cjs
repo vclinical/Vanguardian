@@ -163,12 +163,16 @@ function editHarness() {
   const requests = [];
   const scope = vm.createContext({
     find, loading: false, editing: false, dirty: false, upload: null, mappings: [],
-    catalog: { bindings: [] }, history: [], api: '/api/imports/', csrf: 'csrf-token',
-    status: { textContent: '' }, mappingSummary: context.mappingSummary,
+    catalog: { bindings: [{ id: 1, fields: [{ id: 10 }, { id: 11 }] }] }, history: [], api: '/api/imports/', csrf: 'csrf-token',
+    status: { textContent: '' }, mappingSummary: context.mappingSummary, unavailableTargets: context.unavailableTargets,
     suggestMappings: context.suggestMappings, window: { confirm: () => true },
     renderColumns() { scope.updateSummary(); }, renderHistory() {},
-    setLoading(value) { scope.loading = value; },
+    setLoading(value) { scope.loading = value; scope.updateSummary(); },
     async request(url, options) {
+      if (!options) {
+        if (scope.failCatalog) throw new Error('Không tải được cấu hình');
+        return { catalog: scope.freshCatalog || scope.catalog };
+      }
       requests.push({ url, ...options });
       if (scope.failSave) throw new Error('Mapping đã thay đổi');
       return { mappings: JSON.parse(options.body).mappings, confirmed_at: 'v2', confirmed_by: 9 };
@@ -190,11 +194,11 @@ function editHarness() {
   return { scope, handlers, nodes, requests, record };
 }
 
-test('confirmed mapping can be edited and cancel restores saved targets without mutating them', () => {
+test('confirmed mapping can be edited and cancel restores saved targets without mutating them', async () => {
   const { scope, handlers, nodes, record } = editHarness();
   assert.equal(nodes.edit.hidden, false);
   assert.equal(nodes.acknowledge.disabled, true);
-  handlers.edit();
+  await handlers.edit();
   assert.equal(scope.editing, true);
   assert.equal(nodes.acknowledge.disabled, false);
   assert.equal(nodes['cancel-edit'].hidden, false);
@@ -214,7 +218,7 @@ test('confirmed mapping can be edited and cancel restores saved targets without 
 
 test('saving edits requires acknowledgement and sends the original version with the updated mapping', async () => {
   const { scope, handlers, nodes, requests } = editHarness();
-  handlers.edit();
+  await handlers.edit();
   scope.mappings[0].targets[0].field_id = 11;
   scope.changed();
   await handlers.confirm();
@@ -233,7 +237,7 @@ test('saving edits requires acknowledgement and sends the original version with 
 
 test('failed edit keeps the draft and original version available for retry or cancel', async () => {
   const { scope, handlers, nodes } = editHarness();
-  handlers.edit();
+  await handlers.edit();
   scope.mappings[0].targets[0].field_id = 11;
   scope.changed();
   nodes.acknowledge.checked = true;
@@ -245,4 +249,53 @@ test('failed edit keeps the draft and original version available for retry or ca
   assert.equal(scope.mappings[0].targets[0].field_id, 11);
   assert.equal(scope.upload.confirmation.confirmed_at, 'v1');
   assert.match(scope.status.textContent, /Mapping đã thay đổi/);
+});
+
+test('refreshing catalog identifies stale targets and explicit cleanup keeps valid targets', async () => {
+  const { scope, handlers, nodes, record, requests } = editHarness();
+  record.confirmation.mappings[0].targets.push({ binding_id: 2, field_id: 20 });
+  scope.showUpload(record);
+  scope.freshCatalog = { bindings: [{ id: 2, fields: [{ id: 20 }] }] };
+  await handlers.edit();
+  assert.equal(scope.catalog, scope.freshCatalog);
+  assert.match(nodes.summary.textContent, /1 field không còn hợp lệ ở cột A/);
+  assert.equal(nodes['remove-unavailable'].hidden, false);
+  nodes.acknowledge.checked = true;
+  await handlers.confirm();
+  assert.equal(requests.length, 0, 'stale targets cannot be submitted');
+  scope.window.confirm = () => false;
+  handlers['remove-unavailable']();
+  assert.equal(scope.mappings[0].targets.length, 2);
+  scope.window.confirm = () => true;
+  handlers['remove-unavailable']();
+  assert.equal(scope.mappings[0].targets.length, 1);
+  assert.equal(scope.mappings[0].targets[0].binding_id, 2);
+  assert.equal(record.confirmation.mappings[0].targets.length, 2, 'saved version stays intact');
+  assert.equal(nodes.acknowledge.checked, false);
+  nodes.acknowledge.checked = true;
+  await handlers.confirm();
+  assert.equal(requests.length, 1);
+});
+
+test('removing the last stale target requires an explicit column decision', async () => {
+  const { scope, handlers, nodes } = editHarness();
+  scope.freshCatalog = { bindings: [] };
+  await handlers.edit();
+  handlers['remove-unavailable']();
+  assert.equal(scope.mappings[0].targets.length, 0);
+  assert.equal(scope.mappings[0].skip_reason, '');
+  nodes.acknowledge.checked = true;
+  scope.updateSummary();
+  assert.equal(nodes.confirm.disabled, true);
+  handlers['cancel-edit']();
+  assert.equal(scope.mappings[0].targets[0].field_id, 10);
+});
+
+test('catalog refresh failure does not enable editing with stale configuration', async () => {
+  const { scope, handlers } = editHarness();
+  scope.failCatalog = true;
+  await handlers.edit();
+  assert.equal(scope.editing, false);
+  assert.equal(scope.loading, false);
+  assert.match(scope.status.textContent, /Không tải được cấu hình/);
 });
