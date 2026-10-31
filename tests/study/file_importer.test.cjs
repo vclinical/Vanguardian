@@ -152,3 +152,97 @@ test('does not suggest ambiguous labels, duplicate columns or competing translat
   ], bindings);
   assert.equal(result.every(row => row.targets.length === 0), true);
 });
+
+function editHarness() {
+  const handlers = {};
+  const nodes = {};
+  const find = name => nodes[name] ||= {
+    checked: false, disabled: false, hidden: false, textContent: '',
+    addEventListener(event, callback) { handlers[name] = callback; },
+  };
+  const requests = [];
+  const scope = vm.createContext({
+    find, loading: false, editing: false, dirty: false, upload: null, mappings: [],
+    catalog: { bindings: [] }, history: [], api: '/api/imports/', csrf: 'csrf-token',
+    status: { textContent: '' }, mappingSummary: context.mappingSummary,
+    suggestMappings: context.suggestMappings, window: { confirm: () => true },
+    renderColumns() { scope.updateSummary(); }, renderHistory() {},
+    setLoading(value) { scope.loading = value; },
+    async request(url, options) {
+      requests.push({ url, ...options });
+      if (scope.failSave) throw new Error('Mapping đã thay đổi');
+      return { mappings: JSON.parse(options.body).mappings, confirmed_at: 'v2', confirmed_by: 9 };
+    },
+  });
+  vm.runInContext(source.slice(source.indexOf('  function updateSummary('),
+    source.indexOf('  function setLoading(')), scope);
+  vm.runInContext(source.slice(source.indexOf('  function showUpload('),
+    source.indexOf('  function selectedBinding(')), scope);
+  vm.runInContext(source.slice(source.indexOf("  find('edit').addEventListener"),
+    source.indexOf('  async function initialize(')), scope);
+  const record = { id: 'upload', filename: 'results.xlsx',
+    preview: { sheet: 'Results', header_row: 2, row_count: 1, columns: [{ column: 'A' }] },
+    confirmation: { confirmed_at: 'v1', mappings: [
+      { column: 'A', targets: [{ binding_id: 1, field_id: 10 }], skip_reason: '' },
+    ] },
+  };
+  scope.showUpload(record);
+  return { scope, handlers, nodes, requests, record };
+}
+
+test('confirmed mapping can be edited and cancel restores saved targets without mutating them', () => {
+  const { scope, handlers, nodes, record } = editHarness();
+  assert.equal(nodes.edit.hidden, false);
+  assert.equal(nodes.acknowledge.disabled, true);
+  handlers.edit();
+  assert.equal(scope.editing, true);
+  assert.equal(nodes.acknowledge.disabled, false);
+  assert.equal(nodes['cancel-edit'].hidden, false);
+  scope.mappings[0].targets[0].field_id = 11;
+  scope.changed();
+  assert.equal(record.confirmation.mappings[0].targets[0].field_id, 10);
+  scope.window.confirm = () => false;
+  handlers['cancel-edit']();
+  assert.equal(scope.editing, true, 'declining discard keeps edits');
+  scope.window.confirm = () => true;
+  handlers['cancel-edit']();
+  assert.equal(scope.mappings[0].targets[0].field_id, 10);
+  assert.equal(scope.dirty, false);
+  assert.equal(scope.editing, false);
+  assert.equal(nodes.confirm.disabled, true);
+});
+
+test('saving edits requires acknowledgement and sends the original version with the updated mapping', async () => {
+  const { scope, handlers, nodes, requests } = editHarness();
+  handlers.edit();
+  scope.mappings[0].targets[0].field_id = 11;
+  scope.changed();
+  await handlers.confirm();
+  assert.equal(requests.length, 0);
+  nodes.acknowledge.checked = true;
+  await handlers.confirm();
+  assert.equal(requests.length, 1);
+  const body = JSON.parse(requests[0].body);
+  assert.equal(body.expected_confirmed_at, 'v1');
+  assert.equal(body.mappings[0].targets[0].field_id, 11);
+  assert.equal(requests[0].headers['X-CSRFToken'], 'csrf-token');
+  assert.equal(scope.upload.confirmation.confirmed_at, 'v2');
+  assert.equal(scope.editing, false);
+  assert.equal(scope.dirty, false);
+});
+
+test('failed edit keeps the draft and original version available for retry or cancel', async () => {
+  const { scope, handlers, nodes } = editHarness();
+  handlers.edit();
+  scope.mappings[0].targets[0].field_id = 11;
+  scope.changed();
+  nodes.acknowledge.checked = true;
+  scope.failSave = true;
+  await handlers.confirm();
+  assert.equal(scope.editing, true);
+  assert.equal(scope.dirty, true);
+  assert.equal(scope.loading, false);
+  assert.equal(scope.mappings[0].targets[0].field_id, 11);
+  assert.equal(scope.upload.confirmation.confirmed_at, 'v1');
+  assert.match(scope.status.textContent, /Mapping đã thay đổi/);
+});

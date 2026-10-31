@@ -33,10 +33,16 @@ class StudyFileImporterService:
         return self.repository.create_upload(study_id=study_id, filename=filename, content=content,
                                              preview=preview, actor_user_id=actor_user_id)
 
-    def confirm(self, *, study_id, upload_id, mappings, actor_user_id):
+    def confirm(self, *, study_id, upload_id, mappings, actor_user_id, expected_confirmed_at=None):
         upload = self.repository.get_upload(study_id, upload_id)
-        if upload["confirmation"] is not None:
-            raise ValueError("Mapping đã được xác nhận; tải file lên lại để tạo phiên bản mới.")
+        if expected_confirmed_at is not None and (not isinstance(expected_confirmed_at, str) or not expected_confirmed_at):
+            raise ValueError("Phiên bản mapping không hợp lệ. Mở lại mapping trước khi chỉnh sửa.")
+        if upload["confirmation"] is not None and expected_confirmed_at is None:
+            raise ValueError("Mapping đã được xác nhận; mở lại mapping và chọn Chỉnh sửa mapping.")
+        if expected_confirmed_at is not None and (
+            upload["confirmation"] is None or upload["confirmation"]["confirmed_at"] != expected_confirmed_at
+        ):
+            raise ValueError("Mapping đã thay đổi. Mở lại mapping mới nhất trước khi chỉnh sửa.")
         columns = {column["column"] for column in upload["preview"]["columns"]}
         catalog = self.catalog(study_id)
         allowed = {(binding["id"], field["id"]): (binding, field)
@@ -81,4 +87,4 @@ class StudyFileImporterService:
         if not seen_targets:
             raise ValueError("Cần chọn ít nhất một field đích.")
         return self.repository.confirm(study_id=study_id, upload_id=upload_id,
-                                       mappings=cleaned, actor_user_id=actor_user_id)
+                                       mappings=cleaned, actor_user_id=actor_user_id, expected_confirmed_at=expected_confirmed_at)
