@@ -1,3 +1,4 @@
+import fcntl
 import hashlib
 import json
 import os
@@ -42,15 +43,18 @@ class StudyFileImporterRepository:
         return self.root / str(study_id) / identifier
 
     @staticmethod
-    def _write_json(path, document):
-        # Publish complete JSON atomically without overwriting a concurrent confirmation.
+    def _write_json(path, document, *, replace=False):
+        # Publish complete JSON atomically; replacement requires the confirmation lock.
         with NamedTemporaryFile(mode="w", encoding="utf-8", dir=path.parent, delete=False) as target:
             temporary = Path(target.name)
             try:
                 json.dump(document, target, ensure_ascii=False)
                 target.flush()
                 os.fsync(target.fileno())
-                os.link(temporary, path)
+                if replace:
+                    os.replace(temporary, path)
+                else:
+                    os.link(temporary, path)
             finally:
                 temporary.unlink(missing_ok=True)
 
@@ -77,12 +81,24 @@ class StudyFileImporterRepository:
         except (FileNotFoundError, json.JSONDecodeError) as exc:
             raise ValueError(_("The file was not found in this study or has not finished saving.")) from exc
 
-    def confirm(self, *, study_id, upload_id, mappings, actor_user_id):
-        record = {"mappings": mappings, "confirmed_by": actor_user_id, "confirmed_at": timezone.now().isoformat()}
-        try:
-            self._write_json(self._directory(study_id, upload_id) / "confirmed.json", record)
-        except FileExistsError as exc:
-            raise ValueError("Mapping này đã được xác nhận. Tải file lên lại để tạo phiên bản mới.") from exc
+    def confirm(self, *, study_id, upload_id, mappings, actor_user_id, expected_confirmed_at=None):
+        directory = self._directory(study_id, upload_id)
+        self.get_upload(study_id, upload_id)
+        # Serialize the version check and atomic publish across workers on shared storage.
+        with (directory / "confirmation.lock").open("a") as lock:
+            fcntl.flock(lock, fcntl.LOCK_EX)
+            current = self.get_upload(study_id, upload_id)["confirmation"]
+            if expected_confirmed_at is None:
+                if current is not None:
+                    raise ValueError("Mapping này đã được xác nhận. Mở lại mapping và chọn Chỉnh sửa mapping.")
+            elif current is None or current["confirmed_at"] != expected_confirmed_at:
+                raise ValueError("Mapping đã thay đổi. Mở lại mapping mới nhất trước khi chỉnh sửa.")
+            record = {"mappings": mappings, "confirmed_by": actor_user_id, "confirmed_at": timezone.now().isoformat()}
+            if current is not None:
+                revisions = directory / "revisions"
+                revisions.mkdir(mode=0o700, exist_ok=True)
+                self._write_json(revisions / f"{uuid4()}.json", current)
+            self._write_json(directory / "confirmed.json", record, replace=current is not None)
         return record
 
     def list_uploads(self, study_id):

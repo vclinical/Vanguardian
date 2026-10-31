@@ -122,6 +122,13 @@ class MappedImportTests(SimpleTestCase):
             self.apply(result)
         self.saver.save.assert_not_called()
 
+    def test_editing_confirmed_mapping_invalidates_existing_preview(self):
+        result = self.preview()
+        self.config["confirmation"]["confirmed_at"] = "new-confirmation-version"
+        with self.assertRaises(StaleImportPreviewError):
+            self.apply(result)
+        self.saver.save.assert_not_called()
+
     def test_token_bound_to_actor_and_tamper_rejected(self):
         result = self.preview()
         with self.assertRaises(ValueError):

@@ -1,6 +1,8 @@
 import json
+from concurrent.futures import ThreadPoolExecutor
 from io import BytesIO
 from tempfile import TemporaryDirectory
+from threading import Barrier
 from types import SimpleNamespace
 from unittest.mock import Mock, patch
 from zipfile import ZipFile
@@ -165,6 +167,69 @@ class FileImporterServiceTests(SimpleTestCase):
             with self.assertRaises(ValueError):
                 self.repository.get_upload(3, identifier)
 
+    def test_edit_preserves_source_and_archives_previous_confirmation(self):
+        original = self.confirm()
+        directory = self.repository._directory(3, self.upload["id"])
+        source = (directory / "source.xlsx").read_bytes()
+        self.mapping[0]["targets"] = [{"binding_id": 20, "field_id": 202}]
+        self.mapping[1]["skip_reason"] = "Không sử dụng"
+        updated = self.service.confirm(study_id=3, upload_id=self.upload["id"], mappings=self.mapping,
+                                       actor_user_id=8, expected_confirmed_at=original["confirmed_at"])
+        self.assertEqual(updated["confirmed_by"], 8)
+        self.assertEqual(updated["mappings"][0]["targets"][0]["field_id"], 202)
+        self.assertEqual(updated["mappings"][1]["skip_reason"], "Không sử dụng")
+        self.assertEqual(self.repository.get_upload(3, self.upload["id"])["confirmation"], updated)
+        self.assertEqual(self.repository.list_confirmed_uploads(3)[0]["confirmation"], updated)
+        self.assertEqual(len(self.repository.list_uploads(3)), 1)
+        self.assertEqual((directory / "source.xlsx").read_bytes(), source)
+        archived = list((directory / "revisions").glob("*.json"))
+        self.assertEqual(len(archived), 1)
+        self.assertEqual(json.loads(archived[0].read_text()), original)
+
+    def test_edit_revalidates_mapping_and_preserves_original_on_failure(self):
+        original = self.confirm()
+        self.repository.list_bindings.return_value = []
+        with self.assertRaisesMessage(ValueError, "Cột A: binding 10, field 101"):
+            self.service.confirm(study_id=3, upload_id=self.upload["id"], mappings=self.mapping,
+                                 actor_user_id=8, expected_confirmed_at=original["confirmed_at"])
+        self.assertEqual(self.repository.get_upload(3, self.upload["id"])["confirmation"], original)
+
+    def test_stale_invalid_and_cross_study_edits_are_rejected(self):
+        original = self.confirm()
+        for token in ["old-version", "", True, 123, []]:
+            with self.subTest(token=token), self.assertRaises(ValueError):
+                self.service.confirm(study_id=3, upload_id=self.upload["id"], mappings=self.mapping,
+                                     actor_user_id=8, expected_confirmed_at=token)
+        with self.assertRaises(ValueError):
+            self.service.confirm(study_id=4, upload_id=self.upload["id"], mappings=self.mapping,
+                                 actor_user_id=8, expected_confirmed_at=original["confirmed_at"])
+        self.assertEqual(self.repository.get_upload(3, self.upload["id"])["confirmation"], original)
+
+    def test_concurrent_edits_allow_only_one_writer(self):
+        original = self.confirm()
+        barrier = Barrier(2)
+
+        def save(actor):
+            barrier.wait(timeout=5)
+            try:
+                return self.repository.confirm(study_id=3, upload_id=self.upload["id"], mappings=self.mapping,
+                                               actor_user_id=actor, expected_confirmed_at=original["confirmed_at"])
+            except ValueError:
+                return None
+
+        with ThreadPoolExecutor(max_workers=2) as workers:
+            results = list(workers.map(save, [8, 9]))
+        successful = [result for result in results if result is not None]
+        self.assertEqual(len(successful), 1)
+        self.assertEqual(self.repository.get_upload(3, self.upload["id"])["confirmation"], successful[0])
+
+    def test_failed_publish_keeps_current_mapping_readable(self):
+        original = self.confirm()
+        with patch("apps.study.infrastructure.repositories.file_importer.os.replace", side_effect=OSError), self.assertRaises(OSError):
+            self.repository.confirm(study_id=3, upload_id=self.upload["id"], mappings=self.mapping,
+                                    actor_user_id=8, expected_confirmed_at=original["confirmed_at"])
+        self.assertEqual(self.repository.get_upload(3, self.upload["id"])["confirmation"], original)
+
 
 class FileImporterAPITests(SimpleTestCase):
     def setUp(self):
@@ -187,6 +252,31 @@ class FileImporterAPITests(SimpleTestCase):
             with self.assertRaises(PermissionDenied):
                 StudyFileImporterAPIView.as_view()(request, study_id=3)
         self.assertEqual(check.call_args.kwargs["permission"], "STUDY_CONFIG.MANAGE")
+
+    def test_edit_passes_version_and_authenticated_actor_to_service(self):
+        payload = {"confirmed": True, "mappings": [], "expected_confirmed_at": "version-one", "actor_user_id": 8}
+        request = self.factory.post(self.url, json.dumps(payload), content_type="application/json")
+        request.user = SimpleNamespace(is_authenticated=True, pk=99)
+        service = Mock()
+        service.confirm.return_value = {"confirmed_at": "version-two"}
+        with patch("apps.identity.presentation.mixins.enforce_context_permission", return_value=None) as check, patch.object(
+            StudyFileImporterConfirmAPIView, "get_service", return_value=service,
+        ):
+            response = StudyFileImporterConfirmAPIView.as_view()(request, study_id=3, upload_id="upload")
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response["Cache-Control"], "no-store")
+        self.assertEqual(check.call_args.kwargs["permission"], "STUDY_CONFIG.MANAGE")
+        service.confirm.assert_called_once_with(study_id=3, upload_id="upload", mappings=[], actor_user_id=99,
+                                                expected_confirmed_at="version-one")
+
+    def test_edit_without_manage_permission_does_not_call_service(self):
+        request = self.factory.post(self.url, json.dumps({"confirmed": True, "expected_confirmed_at": "v1"}), content_type="application/json")
+        request.user = SimpleNamespace(is_authenticated=True, pk=99)
+        with patch("apps.identity.presentation.mixins.enforce_context_permission", side_effect=PermissionDenied), patch.object(
+            StudyFileImporterConfirmAPIView, "get_service",
+        ) as get_service, self.assertRaises(PermissionDenied):
+            StudyFileImporterConfirmAPIView.as_view()(request, study_id=3, upload_id="upload")
+        get_service.assert_not_called()
 
     def test_invalid_file_and_missing_confirmation_return_400(self):
         request = self.factory.post(self.url, {"file": SimpleUploadedFile("bad.xlsx", b"bad")})

@@ -70,5 +70,6 @@ class StudyFileImporterConfirmAPIView(FileImporterAccessView):
         if not isinstance(payload, dict) or payload.get("confirmed") is not True:
             raise ValueError("Cần xác nhận đã đối chiếu các cột và field đích.")
         record = service.confirm(study_id=study_id, upload_id=upload_id,
-                                 mappings=payload.get("mappings"), actor_user_id=request.user.pk)
+                                 mappings=payload.get("mappings"), actor_user_id=request.user.pk,
+                                 expected_confirmed_at=payload.get("expected_confirmed_at"))
         return JsonResponse(record)
